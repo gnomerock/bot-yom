@@ -1,0 +1,36 @@
+{
+  "name": "bot-yom",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "deploy": "bun run src/deploy-commands.ts",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:migrate": "bunx drizzle-kit migrate",
+    "db:push": "bunx drizzle-kit push",
+    "db:studio": "bunx drizzle-kit studio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^25.9.1",
+    "drizzle-kit": "^0.31.10"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@discordjs/rest": "^2.6.1",
+    "discord-api-types": "^0.38.48",
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
+  }
+}
