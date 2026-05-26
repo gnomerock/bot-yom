@@ -4,11 +4,11 @@ import {
   type StringSelectMenuInteraction,
 } from "discord.js";
 import { db } from "../db";
-import { content, parties, partyMembers, users } from "../db/schema";
+import { content, parties, partyMembers } from "../db/schema";
 import { JOBS, JOB_ROLES, type Job } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
-import { buildPartyEmbed, dutyIconAttachment, refreshPartyMessage } from "../utils/partyEmbed";
+import { buildPartyEmbed, refreshPartyMessage } from "../utils/partyEmbed";
 
 export async function handleSelectMenu(interaction: StringSelectMenuInteraction) {
   const [action, param] = interaction.customId.split(":");
@@ -23,6 +23,7 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
 }
 
 async function handleCreateContentSelect(interaction: StringSelectMenuInteraction) {
+  // No DB work — fast enough to update directly
   const contentId = parseInt(interaction.values[0]);
 
   const menu = new StringSelectMenuBuilder()
@@ -40,20 +41,21 @@ async function handleCreateJobSelect(
   interaction: StringSelectMenuInteraction,
   contentId: number,
 ) {
+  await interaction.deferUpdate();
+
   const job = interaction.values[0] as Job;
   const guildId = interaction.guildId!;
   const channelId = interaction.channelId;
 
   const user = await upsertUser(interaction.user.id, interaction.user.username);
 
-  // Guard: one open party per user
   const [existing] = await db
     .select()
     .from(parties)
     .where(and(eq(parties.leaderId, user.id), eq(parties.status, "open"), eq(parties.guildId, guildId)));
 
   if (existing) {
-    await interaction.update({
+    await interaction.editReply({
       content: `You already have open party #${existing.id}. Use \`/done disband\` to close it first.`,
       components: [],
     });
@@ -62,11 +64,10 @@ async function handleCreateJobSelect(
 
   const [selectedContent] = await db.select().from(content).where(eq(content.id, contentId));
   if (!selectedContent) {
-    await interaction.update({ content: "Content not found.", components: [] });
+    await interaction.editReply({ content: "Content not found.", components: [] });
     return;
   }
 
-  // Create party (no messageId yet — we set it after sending the announcement)
   const [party] = await db
     .insert(parties)
     .values({ contentId, leaderId: user.id, guildId, channelId, status: "open" })
@@ -74,18 +75,16 @@ async function handleCreateJobSelect(
 
   await db.insert(partyMembers).values({ partyId: party.id, userId: user.id, job });
 
-  // Confirm to creator (ephemeral)
-  await interaction.update({
+  await interaction.editReply({
     content: `✅ Party #${party.id} created! Posting announcement…`,
     components: [],
   });
 
-  // Fetch full party data and post public announcement
+  // Post public party announcement
   const partyData = await getPartyWithDetails(party.id);
   if (!partyData) return;
 
   const { embed, row, attachment } = buildPartyEmbed(partyData);
-
   const channel = interaction.channel;
   if (channel && !channel.isDMBased() && channel.isTextBased()) {
     const msg = await channel.send({
@@ -101,43 +100,41 @@ async function handleJoinJobSelect(
   interaction: StringSelectMenuInteraction,
   partyId: number,
 ) {
+  await interaction.deferUpdate();
+
   const job = interaction.values[0] as Job;
-  const guildId = interaction.guildId!;
 
   const user = await upsertUser(interaction.user.id, interaction.user.username);
 
   const partyData = await getPartyWithDetails(partyId);
   if (!partyData || partyData.party.status !== "open") {
-    await interaction.update({ content: "This party is no longer open.", components: [] });
+    await interaction.editReply({ content: "This party is no longer open.", components: [] });
     return;
   }
 
-  // Already a member?
   const [alreadyMember] = await db
     .select()
     .from(partyMembers)
     .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
 
   if (alreadyMember) {
-    await interaction.update({ content: "You're already in this party!", components: [] });
+    await interaction.editReply({ content: "You're already in this party!", components: [] });
     return;
   }
 
-  // Full?
   if (partyData.members.length >= partyData.content.requiredPlayers) {
-    await interaction.update({ content: "This party is now full.", components: [] });
+    await interaction.editReply({ content: "This party is now full.", components: [] });
     return;
   }
 
   await db.insert(partyMembers).values({ partyId, userId: user.id, job });
 
-  // Refresh party data and update the live announcement
   const updatedData = await getPartyWithDetails(partyId);
   if (updatedData) {
     await refreshPartyMessage(updatedData, interaction.client);
   }
 
-  await interaction.update({
+  await interaction.editReply({
     content: `✅ Joined Party #${partyId} as **${job}**!`,
     components: [],
   });

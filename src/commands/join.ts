@@ -2,6 +2,7 @@ import {
   SlashCommandBuilder,
   StringSelectMenuBuilder,
   ActionRowBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import type { Command } from "../types";
@@ -19,6 +20,8 @@ export default {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const partyId = interaction.options.getInteger("party_id", true);
 
     const [row] = await db
@@ -28,10 +31,7 @@ export default {
       .where(and(eq(parties.id, partyId), eq(parties.status, "open")));
 
     if (!row) {
-      await interaction.reply({
-        content: `Party #${partyId} not found or is no longer open.`,
-        ephemeral: true,
-      });
+      await interaction.editReply(`Party #${partyId} not found or is no longer open.`);
       return;
     }
 
@@ -41,7 +41,7 @@ export default {
       .where(eq(partyMembers.partyId, partyId));
 
     if (memberCount >= row.content.requiredPlayers) {
-      await interaction.reply({ content: `Party #${partyId} is already full.`, ephemeral: true });
+      await interaction.editReply(`Party #${partyId} is already full.`);
       return;
     }
 
@@ -50,10 +50,9 @@ export default {
       .setPlaceholder("Select your job...")
       .addOptions(JOBS.map((job) => ({ label: job, description: JOB_ROLES[job], value: job })));
 
-    await interaction.reply({
+    await interaction.editReply({
       content: `**Joining Party #${partyId}** — Select your job:`,
       components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)],
-      ephemeral: true,
     });
   },
 } satisfies Command;

@@ -1,6 +1,7 @@
 import {
   StringSelectMenuBuilder,
   ActionRowBuilder,
+  MessageFlags,
   type ButtonInteraction,
 } from "discord.js";
 import { db } from "../db";
@@ -17,7 +18,8 @@ export async function handleButton(interaction: ButtonInteraction) {
 }
 
 async function handleJoinButton(interaction: ButtonInteraction, partyId: number) {
-  // Verify party is still open and not full before showing job menu
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
   const [row] = await db
     .select({ party: parties, content })
     .from(parties)
@@ -25,7 +27,7 @@ async function handleJoinButton(interaction: ButtonInteraction, partyId: number)
     .where(and(eq(parties.id, partyId), eq(parties.status, "open")));
 
   if (!row) {
-    await interaction.reply({ content: "This party is no longer open.", ephemeral: true });
+    await interaction.editReply("This party is no longer open.");
     return;
   }
 
@@ -35,7 +37,7 @@ async function handleJoinButton(interaction: ButtonInteraction, partyId: number)
     .where(eq(partyMembers.partyId, partyId));
 
   if (memberCount >= row.content.requiredPlayers) {
-    await interaction.reply({ content: "This party is already full.", ephemeral: true });
+    await interaction.editReply("This party is already full.");
     return;
   }
 
@@ -44,9 +46,8 @@ async function handleJoinButton(interaction: ButtonInteraction, partyId: number)
     .setPlaceholder("Select your job...")
     .addOptions(JOBS.map((job) => ({ label: job, description: JOB_ROLES[job], value: job })));
 
-  await interaction.reply({
+  await interaction.editReply({
     content: `**Joining Party #${partyId}: ${row.content.name}** — Select your job:`,
     components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)],
-    ephemeral: true,
   });
 }

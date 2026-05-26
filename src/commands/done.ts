@@ -1,13 +1,14 @@
 import {
   SlashCommandBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import type { Command } from "../types";
 import { db } from "../db";
-import { parties, partyMembers, users, content } from "../db/schema";
+import { parties, partyMembers, content } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, awardPoints, getPartyWithDetails } from "../db/helpers";
-import { buildPartyEmbed, dutyIconAttachment, refreshPartyMessage } from "../utils/partyEmbed";
+import { refreshPartyMessage } from "../utils/partyEmbed";
 
 export default {
   data: new SlashCommandBuilder()
@@ -25,6 +26,8 @@ export default {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
     const status = interaction.options.getString("status", true) as "cleared" | "disbanded";
     const guildId = interaction.guildId!;
 
@@ -43,34 +46,25 @@ export default {
       );
 
     if (!row) {
-      await interaction.reply({
+      await interaction.editReply({
         content: "You don't have an active party to close. Use `/create` to start one.",
-        ephemeral: true,
-      });
+        flags: MessageFlags.Ephemeral,
+      } as any);
       return;
     }
 
     const partyId = row.party.id;
 
-    // Update party status
     await db
       .update(parties)
       .set({ status, updatedAt: new Date() })
       .where(eq(parties.id, partyId));
 
-    // Award points if cleared
     if (status === "cleared") {
-      const members = await db
-        .select()
-        .from(partyMembers)
-        .where(eq(partyMembers.partyId, partyId));
-
-      await Promise.all(
-        members.map((m) => awardPoints(m.userId, guildId, row.content.pointsOnClear)),
-      );
+      const members = await db.select().from(partyMembers).where(eq(partyMembers.partyId, partyId));
+      await Promise.all(members.map((m) => awardPoints(m.userId, guildId, row.content.pointsOnClear)));
     }
 
-    // Update the live party announcement
     const fullData = await getPartyWithDetails(partyId);
     if (fullData) {
       await refreshPartyMessage(
@@ -85,8 +79,6 @@ export default {
         ? `+${row.content.pointsOnClear} points awarded to all ${fullData?.members.length ?? 0} members.`
         : "No points awarded.";
 
-    await interaction.reply({
-      content: `**Party #${partyId} — ${verb}**\n${detail}`,
-    });
+    await interaction.editReply(`**Party #${partyId} — ${verb}**\n${detail}`);
   },
 } satisfies Command;

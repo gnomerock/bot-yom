@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags, type ChatInputCommandInteraction } from "discord.js";
 import type { Command } from "../types";
 
 export default {
@@ -7,6 +7,8 @@ export default {
     .setDescription("Show all available commands"),
 
   async execute(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const embed = new EmbedBuilder()
       .setTitle("📖 Bot Commands")
       .setColor(0x5865f2)
@@ -15,13 +17,13 @@ export default {
         { name: "`/list`", value: "List all open parties in this server", inline: false },
         { name: "`/create`", value: "Create a new party — choose content and your job. Posts a public Join button for others (max 1 active party per user)", inline: false },
         { name: "`/join <party_id>`", value: "Join a specific party by ID and select your job", inline: false },
-        { name: "`/done <clear | disband>`", value: "End your active party — **clear** awards points to all members, **disband** closes without points", inline: false },
         { name: "`/view <party_id>`", value: "View details of any party by ID", inline: false },
+        { name: "`/done <clear | disband>`", value: "End your active party — **clear** awards points to all members, **disband** closes without points", inline: false },
         { name: "`/lb`", value: "Show the server leaderboard", inline: false },
         { name: "`/help`", value: "Show this message", inline: false },
       )
       .setFooter({ text: "FFXIV Party Finder • Content is managed by server admins via the database" });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
   },
 } satisfies Command;

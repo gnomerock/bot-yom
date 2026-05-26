@@ -2,6 +2,7 @@ import {
   SlashCommandBuilder,
   StringSelectMenuBuilder,
   ActionRowBuilder,
+  MessageFlags,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import type { Command } from "../types";
@@ -15,9 +16,10 @@ export default {
     .setDescription("Create a new party (1 active party per user)"),
 
   async execute(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const guildId = interaction.guildId!;
 
-    // Check for existing open party
     const [existingUser] = await db
       .select()
       .from(users)
@@ -36,10 +38,9 @@ export default {
         );
 
       if (existingParty) {
-        await interaction.reply({
-          content: `You already have an open party (#${existingParty.id}). Use \`/done disband\` to close it first.`,
-          ephemeral: true,
-        });
+        await interaction.editReply(
+          `You already have an open party (#${existingParty.id}). Use \`/done disband\` to close it first.`,
+        );
         return;
       }
     }
@@ -47,10 +48,9 @@ export default {
     const allContent = await db.select().from(content);
 
     if (allContent.length === 0) {
-      await interaction.reply({
-        content: "No content is configured yet. Ask a server admin to add content to the database.",
-        ephemeral: true,
-      });
+      await interaction.editReply(
+        "No content is configured yet. Ask a server admin to add content to the database.",
+      );
       return;
     }
 
@@ -65,10 +65,9 @@ export default {
         })),
       );
 
-    await interaction.reply({
+    await interaction.editReply({
       content: "**Step 1 / 2** — Select the content for your party:",
       components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)],
-      ephemeral: true,
     });
   },
 } satisfies Command;

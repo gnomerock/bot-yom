@@ -10,6 +10,8 @@ export default {
     .setDescription("Show the server leaderboard"),
 
   async execute(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply();
+
     const guildId = interaction.guildId!;
 
     const entries = await db
@@ -21,10 +23,7 @@ export default {
       .limit(10);
 
     if (entries.length === 0) {
-      await interaction.reply({
-        content: "No leaderboard entries yet — clear some content to earn points!",
-        ephemeral: true,
-      });
+      await interaction.editReply("No leaderboard entries yet — clear some content to earn points!");
       return;
     }
 
@@ -39,6 +38,6 @@ export default {
       .setColor(0xffd700)
       .setDescription(lines.join("\n"));
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   },
 } satisfies Command;
