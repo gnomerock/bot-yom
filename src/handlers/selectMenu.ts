@@ -9,6 +9,7 @@ import { JOBS, JOB_ROLES, type Job } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
 import { buildPartyEmbed, refreshPartyMessage } from "../utils/partyEmbed";
+import { notifyPartyCreated } from "../utils/webhook";
 
 export async function handleSelectMenu(interaction: StringSelectMenuInteraction) {
   const [action, param] = interaction.customId.split(":");
@@ -94,6 +95,8 @@ async function handleCreateJobSelect(
     });
     await db.update(parties).set({ messageId: msg.id }).where(eq(parties.id, party.id));
   }
+
+  await notifyPartyCreated(partyData);
 }
 
 async function handleJoinJobSelect(

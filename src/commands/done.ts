@@ -6,7 +6,7 @@ import {
 import type { Command } from "../types";
 import { db } from "../db";
 import { parties, partyMembers, content } from "../db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import { upsertUser, awardPoints, getPartyWithDetails } from "../db/helpers";
 import { refreshPartyMessage } from "../utils/partyEmbed";
 
@@ -50,6 +50,20 @@ export default {
     }
 
     const partyId = row.party.id;
+
+    if (status === "cleared") {
+      const [{ value: memberCount }] = await db
+        .select({ value: count() })
+        .from(partyMembers)
+        .where(eq(partyMembers.partyId, partyId));
+
+      if (memberCount < row.content.requiredPlayers) {
+        await interaction.editReply(
+          `Cannot clear — party needs **${row.content.requiredPlayers} members** but only has **${memberCount}**. Fill all slots first or use \`/done disband\`.`,
+        );
+        return;
+      }
+    }
 
     await db
       .update(parties)
