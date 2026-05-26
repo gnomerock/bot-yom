@@ -7,6 +7,7 @@ import create from "./commands/create";
 import join from "./commands/join";
 import done from "./commands/done";
 import lb from "./commands/lb";
+import view from "./commands/view";
 import ready from "./events/ready";
 import interactionCreate from "./events/interactionCreate";
 import { deployCommands } from "./deploy-commands";
@@ -28,7 +29,7 @@ async function startBot() {
 
   client.commands = new Collection<string, Command>();
 
-  for (const command of [ping, help, list, create, join, done, lb]) {
+  for (const command of [ping, help, list, create, join, done, lb, view]) {
     client.commands.set(command.data.name, command);
   }
 

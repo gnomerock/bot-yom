@@ -16,6 +16,7 @@ export default {
         { name: "`/create`", value: "Create a new party — choose content and your job. Posts a public Join button for others (max 1 active party per user)", inline: false },
         { name: "`/join <party_id>`", value: "Join a specific party by ID and select your job", inline: false },
         { name: "`/done <clear | disband>`", value: "End your active party — **clear** awards points to all members, **disband** closes without points", inline: false },
+        { name: "`/view <party_id>`", value: "View details of any party by ID", inline: false },
         { name: "`/lb`", value: "Show the server leaderboard", inline: false },
         { name: "`/help`", value: "Show this message", inline: false },
       )
