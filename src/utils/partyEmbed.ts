@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import { join } from "node:path";
 import type { ContentType, PartyStatus } from "../db/schema";
+import { jobEmoji } from "./jobEmoji";
 
 const publicDir = join(import.meta.dir, "../..", "public");
 
@@ -31,7 +32,7 @@ export function dutyIconAttachment(type: ContentType, name = "duty-icon.png"): A
 }
 
 export type PartyEmbedData = {
-  party: { id: number; status: PartyStatus; channelId: string; messageId: string | null };
+  party: { id: number; status: PartyStatus; channelId: string; messageId: string | null; description?: string | null };
   content: {
     name: string;
     type: ContentType;
@@ -54,7 +55,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
 
   const statusIcon = party.status === "cleared" ? "✅" : party.status === "disbanded" ? "❌" : "🔵";
   const color = isOpen
-    ? TYPE_COLORS[content.type]
+    ? (TYPE_COLORS[content.type as ContentType] ?? 0x5865f2)
     : party.status === "cleared" ? 0xffd700 : 0x888888;
 
   const attachment = dutyIconAttachment(content.type, iconName);
@@ -70,12 +71,13 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       { name: "Leader", value: leaderName, inline: false },
     );
 
-  if (content.description) embed.setDescription(content.description);
+  const embedDesc = party.description ?? content.description;
+  if (embedDesc) embed.setDescription(embedDesc);
 
   if (members.length > 0) {
     embed.addFields({
       name: `Members (${members.length} / ${content.requiredPlayers})`,
-      value: members.map(m => `• **${m.user.username}** — ${m.member.job}`).join("\n"),
+      value: members.map(m => `${jobEmoji(m.member.job)} **${m.user.username}** — ${m.member.job}`).join("\n"),
     });
   }
 

@@ -19,6 +19,8 @@ export default {
         { name: "`/join <party_id>`", value: "Join a specific party by ID and select your job", inline: false },
         { name: "`/view <party_id>`", value: "View details of any party by ID", inline: false },
         { name: "`/done <clear | disband>`", value: "End your active party — **clear** awards points to all members, **disband** closes without points", inline: false },
+        { name: "`/edit`", value: "Edit the description / note of your active party", inline: false },
+        { name: "`/leave <party_id>`", value: "Leave a party you've joined (leaders use `/done disband` instead)", inline: false },
         { name: "`/lb`", value: "Show the server leaderboard", inline: false },
         { name: "`/help`", value: "Show this message", inline: false },
       )

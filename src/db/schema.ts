@@ -33,6 +33,7 @@ export const JOB_ROLES: Record<Job, string> = {
   Pictomancer: "Caster DPS", "Blue Mage": "Limited",
 };
 
+
 export const CONTENT_TYPES = ["raid", "high-end"] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
@@ -62,6 +63,7 @@ export const parties = pgTable("parties", {
   guildId: text("guild_id").notNull(),
   channelId: text("channel_id").notNull(),
   messageId: text("message_id"),
+  description: text("description"),
   status: text("status").$type<PartyStatus>().notNull().default("open"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

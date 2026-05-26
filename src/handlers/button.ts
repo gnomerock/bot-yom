@@ -14,6 +14,8 @@ export async function handleButton(interaction: ButtonInteraction) {
 
   if (action === "join") {
     await handleJoinButton(interaction, parseInt(param));
+  } else if (action === "create_back") {
+    await handleCreateBackButton(interaction);
   }
 }
 
@@ -48,6 +50,26 @@ async function handleJoinButton(interaction: ButtonInteraction, partyId: number)
 
   await interaction.editReply({
     content: `**Joining Party #${partyId}: ${row.content.name}** — Select your job:`,
+    components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)],
+  });
+}
+
+async function handleCreateBackButton(interaction: ButtonInteraction) {
+  const allContent = await db.select().from(content);
+
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId("create_content_select")
+    .setPlaceholder("Choose content...")
+    .addOptions(
+      allContent.map((c) => ({
+        label: c.name,
+        description: `${c.type === "high-end" ? "🔥 High-End" : "⚔️ Raid"} · ${c.requiredPlayers} players · +${c.pointsOnClear} pts`,
+        value: String(c.id),
+      })),
+    );
+
+  await interaction.update({
+    content: "**Step 1 / 2** — Select the content for your party:",
     components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)],
   });
 }

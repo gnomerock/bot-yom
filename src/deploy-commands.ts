@@ -5,10 +5,12 @@ import list from "./commands/list";
 import create from "./commands/create";
 import join from "./commands/join";
 import done from "./commands/done";
+import edit from "./commands/edit";
+import leave from "./commands/leave";
 import lb from "./commands/lb";
 import view from "./commands/view";
 
-const commands = [ping, help, list, create, join, done, lb, view].map((c) => c.data.toJSON());
+const commands = [ping, help, list, create, join, done, edit, leave, lb, view].map((c) => c.data.toJSON());
 
 export async function deployCommands() {
   const rest = new REST().setToken(process.env.DISCORD_TOKEN!);

@@ -2,6 +2,7 @@ import { Events, MessageFlags, type Interaction } from "discord.js";
 import type { BotClient } from "../types";
 import { handleSelectMenu } from "../handlers/selectMenu";
 import { handleButton } from "../handlers/button";
+import { handleModal } from "../handlers/modal";
 
 const errMsg = { content: "An error occurred.", flags: MessageFlags.Ephemeral };
 
@@ -40,6 +41,12 @@ export default {
     } else if (interaction.isButton()) {
       try {
         await handleButton(interaction);
+      } catch (error) {
+        await safeReply(interaction, error);
+      }
+    } else if (interaction.isModalSubmit()) {
+      try {
+        await handleModal(interaction);
       } catch (error) {
         await safeReply(interaction, error);
       }

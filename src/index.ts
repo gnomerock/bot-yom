@@ -6,6 +6,8 @@ import list from "./commands/list";
 import create from "./commands/create";
 import join from "./commands/join";
 import done from "./commands/done";
+import edit from "./commands/edit";
+import leave from "./commands/leave";
 import lb from "./commands/lb";
 import view from "./commands/view";
 import ready from "./events/ready";
@@ -29,7 +31,7 @@ async function startBot() {
 
   client.commands = new Collection<string, Command>();
 
-  for (const command of [ping, help, list, create, join, done, lb, view]) {
+  for (const command of [ping, help, list, create, join, done, edit, leave, lb, view]) {
     client.commands.set(command.data.name, command);
   }
 
