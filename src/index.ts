@@ -1,11 +1,17 @@
 import { Client, Collection, GatewayIntentBits } from "discord.js";
 import type { BotClient, Command } from "./types";
 import ping from "./commands/ping";
+import help from "./commands/help";
+import list from "./commands/list";
+import create from "./commands/create";
+import join from "./commands/join";
+import done from "./commands/done";
+import lb from "./commands/lb";
 import ready from "./events/ready";
 import interactionCreate from "./events/interactionCreate";
 import { deployCommands } from "./deploy-commands";
 
-// Health check server required by Fly.io
+// Health check server for Fly.io
 Bun.serve({
   port: parseInt(process.env.PORT || "8080", 10),
   fetch() {
@@ -22,7 +28,7 @@ async function startBot() {
 
   client.commands = new Collection<string, Command>();
 
-  for (const command of [ping]) {
+  for (const command of [ping, help, list, create, join, done, lb]) {
     client.commands.set(command.data.name, command);
   }
 
