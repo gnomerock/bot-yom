@@ -51,6 +51,9 @@ COPY --from=build /app/.next ./.next
 # Bot source (transpiled at runtime by Bun)
 COPY --from=build /app/src ./src
 
+# Static assets
+COPY --from=build /app/public ./public
+
 # Entry point and Next.js config
 COPY --from=build /app/server.ts ./server.ts
 COPY --from=build /app/next.config.ts ./next.config.ts
