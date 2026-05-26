@@ -65,4 +65,4 @@ COPY --from=build /app/package.json ./package.json
 
 EXPOSE 8080
 
-CMD ["/usr/local/bin/bun", "run", "start"]
+CMD ["/usr/local/bin/bun", "server.ts"]
