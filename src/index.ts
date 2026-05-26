@@ -16,10 +16,14 @@ export async function startBot() {
   }
 
   for (const event of [ready, interactionCreate]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const name = event.name as any;
+    const handler = (...args: unknown[]) =>
+      (event.execute as (...a: unknown[]) => unknown)(...args);
     if ('once' in event && event.once) {
-      client.once(event.name, (...args) => event.execute(...(args as [never])));
+      client.once(name, handler);
     } else {
-      client.on(event.name, (...args) => event.execute(...(args as [never])));
+      client.on(name, handler);
     }
   }
 
