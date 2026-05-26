@@ -1,39 +1,52 @@
 # syntax = docker/dockerfile:1
 
-# Adjust BUN_VERSION as desired
 ARG BUN_VERSION=1.1.24
-FROM oven/bun:${BUN_VERSION}-slim AS base
 
-LABEL fly_launch_runtime="Bun"
+# ── Stage 1: build ────────────────────────────────────────────────────────────
+FROM oven/bun:${BUN_VERSION} AS build
 
-# Bun app lives here
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
-
-
-# Throw-away build stage to reduce size of final image
-FROM base AS build
-
-# Install packages needed to build node modules
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential pkg-config python-is-python3
 
-# Install node modules
 COPY bun.lock package.json ./
-RUN bun install --ci
+RUN bun install --frozen-lockfile
 
-# Copy application code
 COPY . .
+RUN bun run build
 
+# ── Stage 2: production deps only ─────────────────────────────────────────────
+FROM oven/bun:${BUN_VERSION}-slim AS prod-deps
 
-# Final stage for app image
-FROM base
+WORKDIR /app
 
-# Copy built application
-COPY --from=build /app /app
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
 
-# Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-CMD [ "/bin/sh", "-c", "bun run deploy && bun run start" ]
+# ── Stage 3: distroless runtime ───────────────────────────────────────────────
+FROM gcr.io/distroless/base-debian12
+
+WORKDIR /app
+
+# Bun binary
+COPY --from=build /usr/local/bin/bun /usr/local/bin/bun
+
+# Production node_modules (no devDeps)
+COPY --from=prod-deps /app/node_modules ./node_modules
+
+# Next.js compiled output
+COPY --from=build /app/.next ./.next
+
+# Bot source (transpiled at runtime by Bun)
+COPY --from=build /app/src ./src
+
+# Entry point and Next.js config
+COPY --from=build /app/server.ts ./server.ts
+COPY --from=build /app/next.config.ts ./next.config.ts
+COPY --from=build /app/tsconfig.json ./tsconfig.json
+COPY --from=build /app/package.json ./package.json
+
+EXPOSE 8080
+
+CMD ["/usr/local/bin/bun", "run", "start"]

@@ -1,0 +1,25 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
+
+export function SignOutButton() {
+  const router = useRouter();
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={async () => {
+        await authClient.signOut();
+        router.push("/");
+        router.refresh();
+      }}
+    >
+      <LogOut className="w-4 h-4 mr-1" />
+      Sign out
+    </Button>
+  );
+}

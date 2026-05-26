@@ -33,4 +33,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-drizzle/
+# drizzle migration files are committed so CI can run db:migrate
+
+# Next.js
+.next/
+out/
