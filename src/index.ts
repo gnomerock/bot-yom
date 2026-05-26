@@ -3,8 +3,19 @@ import type { BotClient, Command } from "./types";
 import ping from "./commands/ping";
 import ready from "./events/ready";
 import interactionCreate from "./events/interactionCreate";
+import { deployCommands } from "./deploy-commands";
 
-export async function startBot() {
+// Health check server required by Fly.io
+Bun.serve({
+  port: parseInt(process.env.PORT || "8080", 10),
+  fetch() {
+    return new Response("ok");
+  },
+});
+
+async function startBot() {
+  await deployCommands();
+
   const client = new Client({
     intents: [GatewayIntentBits.Guilds],
   }) as BotClient;
@@ -16,11 +27,10 @@ export async function startBot() {
   }
 
   for (const event of [ready, interactionCreate]) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const name = event.name as any;
     const handler = (...args: unknown[]) =>
       (event.execute as (...a: unknown[]) => unknown)(...args);
-    if ('once' in event && event.once) {
+    if ("once" in event && event.once) {
       client.once(name, handler);
     } else {
       client.on(name, handler);
@@ -29,3 +39,5 @@ export async function startBot() {
 
   await client.login(process.env.DISCORD_TOKEN);
 }
+
+startBot().catch(console.error);
