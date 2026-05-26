@@ -26,3 +26,10 @@ for (const event of [ready, interactionCreate]) {
 }
 
 client.login(process.env.DISCORD_TOKEN);
+
+Bun.serve({
+  port: 8080,
+  fetch() {
+    return new Response("OK");
+  },
+});
