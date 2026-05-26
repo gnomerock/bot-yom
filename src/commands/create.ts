@@ -1,6 +1,8 @@
 import {
   SlashCommandBuilder,
-  StringSelectMenuBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   ActionRowBuilder,
   MessageFlags,
   type ChatInputCommandInteraction,
@@ -8,17 +10,32 @@ import {
 import type { Command } from "../types";
 import { db } from "../db";
 import { content, parties, users } from "../db/schema";
+import { JOBS, type Job } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("create")
-    .setDescription("Create a new party (1 active party per user)"),
+    .setDescription("Create a new party (1 active party per user)")
+    .addStringOption((option) =>
+      option
+        .setName("content")
+        .setDescription("The content for your party")
+        .setRequired(true)
+        .setAutocomplete(true),
+    )
+    .addStringOption((option) =>
+      option
+        .setName("job")
+        .setDescription("Your job/class")
+        .setRequired(true)
+        .addChoices(JOBS.map((job) => ({ name: job, value: job }))),
+    ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-    const guildId = interaction.guildId!;
+    // No defer — showModal must be the first response
+    const contentId = parseInt(interaction.options.getString("content", true));
+    const job = interaction.options.getString("job", true) as Job;
 
     const [existingUser] = await db
       .select()
@@ -32,36 +49,35 @@ export default {
         .where(and(eq(parties.leaderId, existingUser.id), eq(parties.status, "open")));
 
       if (existingParty) {
-        await interaction.editReply(
-          `You already have an open party (#${existingParty.id}). Use \`/done disband\` to close it first.`,
-        );
+        await interaction.reply({
+          content: `You already have an open party (#${existingParty.id}). Use \`/done disband\` to close it first.`,
+          flags: MessageFlags.Ephemeral,
+        });
         return;
       }
     }
 
-    const allContent = await db.select().from(content);
-
-    if (allContent.length === 0) {
-      await interaction.editReply(
-        "No content is configured yet. Ask a server admin to add content to the database.",
-      );
+    const [selectedContent] = await db.select().from(content).where(eq(content.id, contentId));
+    if (!selectedContent) {
+      await interaction.reply({ content: "Content not found.", flags: MessageFlags.Ephemeral });
       return;
     }
 
-    const menu = new StringSelectMenuBuilder()
-      .setCustomId("create_content_select")
-      .setPlaceholder("Choose content...")
-      .addOptions(
-        allContent.map((c) => ({
-          label: c.name,
-          description: `${c.type === "high-end" ? "🔥 High-End" : "⚔️ Raid"} · ${c.requiredPlayers} players · +${c.pointsOnClear} pts`,
-          value: String(c.id),
-        })),
+    const modal = new ModalBuilder()
+      .setCustomId(`create_modal:${contentId}:${job}`)
+      .setTitle(`Create Party — ${selectedContent.name}`)
+      .addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(
+          new TextInputBuilder()
+            .setCustomId("description")
+            .setLabel("Party Note (optional)")
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder("e.g. LF exp. players, must know mechanics. Prog-friendly.")
+            .setRequired(false)
+            .setMaxLength(500),
+        ),
       );
 
-    await interaction.editReply({
-      content: "**Step 1 / 2** — Select the content for your party:",
-      components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)],
-    });
+    await interaction.showModal(modal);
   },
 } satisfies Command;
