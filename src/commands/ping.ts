@@ -7,8 +7,8 @@ export default {
     .setDescription("Check bot latency"),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    const { resource } = await interaction.reply({ content: "Pinging..." }).withResponse();
-    const sent = resource.message;
+    await interaction.reply({ content: "Pinging..." });
+    const sent = await interaction.fetchReply();
     const latency = sent.createdTimestamp - interaction.createdTimestamp;
     await interaction.editReply(`Pong! Latency: ${latency}ms | API: ${interaction.client.ws.ping}ms`);
   },
