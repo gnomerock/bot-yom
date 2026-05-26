@@ -16,7 +16,7 @@ export async function startBot() {
   }
 
   for (const event of [ready, interactionCreate]) {
-    if (event.once) {
+    if ('once' in event && event.once) {
       client.once(event.name, (...args) => event.execute(...(args as [never])));
     } else {
       client.on(event.name, (...args) => event.execute(...(args as [never])));
