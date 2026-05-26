@@ -16,7 +16,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "private": true,
   "devDependencies": {
     "@types/bun": "latest",
