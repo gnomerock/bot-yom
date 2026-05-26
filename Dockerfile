@@ -14,6 +14,16 @@ COPY bun.lock package.json ./
 RUN bun install --frozen-lockfile
 
 COPY . .
+
+# Dummy build-time env vars — real secrets are injected by fly.io at runtime.
+# next build analyzes server code that imports auth/db modules; these prevent
+# the module-level initialization from throwing on missing env vars.
+ENV DATABASE_URL=postgresql://localhost:5432/build \
+    DISCORD_CLIENT_ID=build \
+    DISCORD_CLIENT_SECRET=build \
+    BETTER_AUTH_SECRET=build \
+    BETTER_AUTH_URL=http://localhost:8080
+
 RUN bun run build
 
 # ── Stage 2: production deps only ─────────────────────────────────────────────
