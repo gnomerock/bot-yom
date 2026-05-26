@@ -38,7 +38,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 # ── Stage 3: distroless runtime ───────────────────────────────────────────────
-FROM gcr.io/distroless/base-debian12
+FROM gcr.io/distroless/cc-debian12
 
 WORKDIR /app
 
