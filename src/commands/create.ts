@@ -29,13 +29,7 @@ export default {
       const [existingParty] = await db
         .select()
         .from(parties)
-        .where(
-          and(
-            eq(parties.leaderId, existingUser.id),
-            eq(parties.status, "open"),
-            eq(parties.guildId, guildId),
-          ),
-        );
+        .where(and(eq(parties.leaderId, existingUser.id), eq(parties.status, "open")));
 
       if (existingParty) {
         await interaction.editReply(

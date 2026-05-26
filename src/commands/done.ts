@@ -38,11 +38,7 @@ export default {
       .from(parties)
       .innerJoin(content, eq(parties.contentId, content.id))
       .where(
-        and(
-          eq(parties.leaderId, user.id),
-          eq(parties.status, "open"),
-          eq(parties.guildId, guildId),
-        ),
+        and(eq(parties.leaderId, user.id), eq(parties.status, "open")),
       );
 
     if (!row) {

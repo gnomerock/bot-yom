@@ -27,7 +27,7 @@ export default {
       .from(parties)
       .innerJoin(content, eq(parties.contentId, content.id))
       .innerJoin(users, eq(parties.leaderId, users.id))
-      .where(and(eq(parties.status, "open"), eq(parties.guildId, guildId)));
+      .where(eq(parties.status, "open"));
 
     if (openParties.length === 0) {
       await interaction.editReply("No open parties right now. Use `/create` to start one!");
@@ -50,7 +50,7 @@ export default {
       const typeTag = c.type === "high-end" ? "🔥 High-End" : "⚔️ Raid";
       const link =
         party.messageId
-          ? ` • [View](https://discord.com/channels/${guildId}/${party.channelId}/${party.messageId})`
+          ? ` • [View](https://discord.com/channels/${party.guildId}/${party.channelId}/${party.messageId})`
           : "";
 
       return {
@@ -64,7 +64,7 @@ export default {
       .setTitle(`🎮 Open Parties (${openParties.length})`)
       .setColor(0x5865f2)
       .addFields(fields)
-      .setFooter({ text: "Click a party's View link or use /join <id> to join" });
+      .setFooter({ text: "Parties are shared across all servers • use /join <id> or click View to join" });
 
     const joinableButtons = openParties.slice(0, 5).map(({ party, content: c }) => {
       const isFull = (countMap.get(party.id) ?? 0) >= c.requiredPlayers;
