@@ -18,12 +18,15 @@ const RAID_TIMES = [
   "22:00", "22:30", "23:00", "23:30",
 ];
 
+const GMT7_OFFSET_MS = 7 * 60 * 60 * 1000;
+
 function generateDateSuggestions() {
-  const now = new Date();
+  // Base "today" on GMT+7, not UTC
+  const nowGMT7 = new Date(Date.now() + GMT7_OFFSET_MS);
   const suggestions = [];
 
   for (let i = 0; i < 14; i++) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + i));
+    const d = new Date(Date.UTC(nowGMT7.getUTCFullYear(), nowGMT7.getUTCMonth(), nowGMT7.getUTCDate() + i));
     const yyyy = d.getUTCFullYear();
     const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
     const dd = String(d.getUTCDate()).padStart(2, "0");
@@ -112,7 +115,7 @@ export default {
           } else if (focused.name === "time") {
             const filtered = RAID_TIMES
               .filter((t) => t.startsWith(focused.value))
-              .map((t) => ({ name: `${t} UTC`, value: t }))
+              .map((t) => ({ name: `${t} GMT+7`, value: t }))
               .slice(0, 25);
             await interaction.respond(filtered);
           }

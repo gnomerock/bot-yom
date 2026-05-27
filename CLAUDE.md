@@ -1,4 +1,8 @@
 
+## Bot conventions
+
+- Default timezone is **GMT+7** (Asia/Bangkok). All user-facing date/time input and display uses GMT+7. Dates are stored as UTC internally (`GMT+7 = UTC+7`, so subtract 7 hours when storing).
+
 Default to using Bun instead of Node.js.
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`

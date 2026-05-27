@@ -34,14 +34,14 @@ export default {
     .addStringOption((option) =>
       option
         .setName("date")
-        .setDescription("Scheduled date in UTC (pick from suggestions or type YYYY-MM-DD)")
+        .setDescription("Scheduled date in GMT+7 (pick from suggestions or type YYYY-MM-DD)")
         .setRequired(false)
         .setAutocomplete(true),
     )
     .addStringOption((option) =>
       option
         .setName("time")
-        .setDescription("Scheduled time in UTC (pick from suggestions or type HH:MM)")
+        .setDescription("Scheduled time in GMT+7 (pick from suggestions or type HH:MM)")
         .setRequired(false)
         .setAutocomplete(true),
     )
@@ -79,7 +79,7 @@ export default {
         await interaction.editReply(`❌ Invalid time **${timeInput}**. Pick from the suggestions or type \`HH:MM\`.`);
         return;
       }
-      const parsed = new Date(`${dateInput}T${timeInput}:00Z`);
+      const parsed = new Date(`${dateInput}T${timeInput}:00+07:00`);
       if (isNaN(parsed.getTime())) {
         await interaction.editReply("❌ Invalid date/time combination.");
         return;
