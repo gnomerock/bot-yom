@@ -1,5 +1,5 @@
 import type { Client } from "discord.js";
-import { JOBS, type Job } from "../db/schema";
+import { JOBS, type Job, type ContentType } from "../db/schema";
 
 // 3-char emoji name → full Job name
 const JOB_ABBREV: Record<string, Job> = {
@@ -33,8 +33,18 @@ const JOB_ABBREV: Record<string, Job> = {
   blu: "Blue Mage",
 };
 
+// Content type emoji name → ContentType
+const CONTENT_EMOJI_NAMES: Record<string, ContentType> = {
+  raid: "raid",
+  high_end: "high-end",
+  highend: "high-end",
+};
+
 // Job name → <:name:id> emoji string (populated at startup)
 const emojiMap = new Map<Job, string>();
+
+// ContentType → <:name:id> emoji string (populated at startup)
+const contentEmojiMap = new Map<ContentType, string>();
 
 export function setupJobEmojis(client: Client) {
   const cache = client.application?.emojis.cache;
@@ -42,21 +52,30 @@ export function setupJobEmojis(client: Client) {
 
   for (const emoji of cache.values()) {
     if (!emoji.name) continue;
+    const name = emoji.name.toLowerCase();
+    const str = emoji.animated
+      ? `<a:${emoji.name}:${emoji.id}>`
+      : `<:${emoji.name}:${emoji.id}>`;
 
-    const abbrev = emoji.name.toLowerCase();
-    const job = JOB_ABBREV[abbrev];
+    // Job emojis
+    const job = JOB_ABBREV[name];
+    if (job) emojiMap.set(job, str);
 
-    if (job) {
-      emojiMap.set(
-        job,
-        emoji.animated
-          ? `<a:${emoji.name}:${emoji.id}>`
-          : `<:${emoji.name}:${emoji.id}>`,
-      );
-    }
+    // Content type emojis
+    const contentType = CONTENT_EMOJI_NAMES[name];
+    if (contentType) contentEmojiMap.set(contentType, str);
   }
 }
 
 export function jobEmoji(job: Job | string): string {
   return emojiMap.get(job as Job) ?? "";
+}
+
+/** Returns the emoji for a content type, falling back to the "raid" emoji or a default. */
+export function contentTypeEmoji(type: ContentType | string): string {
+  return (
+    contentEmojiMap.get(type as ContentType) ??
+    contentEmojiMap.get("raid") ??
+    "⚔️"
+  );
 }

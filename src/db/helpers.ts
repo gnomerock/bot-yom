@@ -26,7 +26,12 @@ export async function getPartyWithDetails(partyId: number) {
 
   const [leader] = await db.select().from(users).where(eq(users.id, row.party.leaderId));
 
-  return { ...row, members, leaderName: leader?.username ?? "Unknown" };
+  return {
+    ...row,
+    members,
+    leaderName: leader?.username ?? "Unknown",
+    leaderDiscordId: leader?.discordId ?? "",
+  };
 }
 
 export async function awardPoints(userId: number, guildId: string, points: number) {

@@ -22,12 +22,12 @@ export default {
       return;
     }
 
-    const { embed, row, attachment } = buildPartyEmbed(data);
+    const { embed, rows, attachment } = buildPartyEmbed(data);
 
     await interaction.editReply({
       embeds: [embed],
       files: [attachment],
-      components: row ? [row] : [],
+      components: rows,
     });
   },
 } satisfies Command;

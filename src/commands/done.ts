@@ -78,7 +78,7 @@ export default {
     const fullData = await getPartyWithDetails(partyId);
     if (fullData) {
       await refreshAllPartyMessages(
-        { party: { ...fullData.party, status }, content: fullData.content, members: fullData.members, leaderName: fullData.leaderName },
+        { party: { ...fullData.party, status }, content: fullData.content, members: fullData.members, leaderName: fullData.leaderName, leaderDiscordId: fullData.leaderDiscordId },
         interaction.client,
       );
     }

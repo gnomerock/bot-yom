@@ -11,7 +11,6 @@ import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
 import { buildPartyEmbed } from "../utils/partyEmbed";
 import { postToBoard } from "../utils/board";
-import { notifyPartyCreated } from "../utils/webhook";
 
 export default {
   data: new SlashCommandBuilder()
@@ -127,13 +126,13 @@ export default {
     const partyData = await getPartyWithDetails(party.id);
     if (!partyData) return;
 
-    const { embed, row, attachment } = buildPartyEmbed(partyData);
+    const { embed, rows, attachment } = buildPartyEmbed(partyData);
     const channel = interaction.channel;
     if (channel && !channel.isDMBased() && channel.isTextBased()) {
       const msg = await channel.send({
         embeds: [embed],
         files: [attachment],
-        components: row ? [row] : [],
+        components: rows,
       });
       await db.update(parties).set({ messageId: msg.id }).where(eq(parties.id, party.id));
     }
@@ -142,6 +141,5 @@ export default {
     const freshData = await getPartyWithDetails(party.id);
     if (freshData) await postToBoard(freshData, interaction.client);
 
-    await notifyPartyCreated(partyData);
   },
 } satisfies Command;

@@ -6,8 +6,9 @@ import {
   AttachmentBuilder,
 } from "discord.js";
 import { join } from "node:path";
-import type { ContentType, PartyStatus } from "../db/schema";
-import { jobEmoji } from "./jobEmoji";
+import type { ContentType, PartyStatus, Job } from "../db/schema";
+import { JOB_ROLES } from "../db/schema";
+import { jobEmoji, contentTypeEmoji } from "./jobEmoji";
 
 const publicDir = join(import.meta.dir, "../..", "public");
 
@@ -27,7 +28,7 @@ const TYPE_COLORS: Record<ContentType, number> = {
 };
 
 export function dutyIconAttachment(type: ContentType, name = "duty-icon.png"): AttachmentBuilder {
-  const file = DUTY_ICONS[type] ?? "raid.png";
+  const file = DUTY_ICONS[type as ContentType] ?? "raid.png";
   return new AttachmentBuilder(join(publicDir, "duties", file), { name });
 }
 
@@ -51,14 +52,15 @@ export type PartyEmbedData = {
   };
   members: Array<{ user: { username: string }; member: { job: string } }>;
   leaderName: string;
+  leaderDiscordId: string;
 };
 
 export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"): {
   embed: EmbedBuilder;
-  row: ActionRowBuilder<ButtonBuilder> | null;
+  rows: ActionRowBuilder<ButtonBuilder>[];
   attachment: AttachmentBuilder;
 } {
-  const { party, content, members, leaderName } = data;
+  const { party, content, members, leaderName, leaderDiscordId } = data;
   const isFull = members.length >= content.requiredPlayers;
   const isOpen = party.status === "open";
 
@@ -68,20 +70,20 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     : party.status === "cleared" ? 0xffd700 : 0x888888;
 
   const attachment = dutyIconAttachment(content.type, iconName);
+  const typeEmoji = contentTypeEmoji(content.type);
 
   const embed = new EmbedBuilder()
     .setColor(color)
     .setTitle(`${statusIcon} Party #${party.id} — ${content.name}`)
     .setThumbnail(`attachment://${iconName}`)
     .addFields(
-      { name: "Type", value: TYPE_LABELS[content.type as ContentType] ?? content.type, inline: true },
+      { name: "Type", value: `${typeEmoji} ${TYPE_LABELS[content.type as ContentType] ?? content.type}`, inline: true },
       { name: "Slots", value: `${members.length} / ${content.requiredPlayers}`, inline: true },
       { name: "Points", value: `+${content.pointsOnClear} on clear`, inline: true },
-      { name: "Leader", value: leaderName || "Unknown", inline: false },
+      { name: "Leader", value: leaderDiscordId ? `<@${leaderDiscordId}>` : (leaderName || "Unknown"), inline: false },
     );
 
   if (party.scheduledAt) {
-    // Drizzle may return timestamps as strings in some configurations
     const scheduledDate = party.scheduledAt instanceof Date
       ? party.scheduledAt
       : new Date(party.scheduledAt as unknown as string);
@@ -108,23 +110,65 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   const footerText =
     party.status === "cleared" ? "🎉 Party cleared!" :
     party.status === "disbanded" ? "Party disbanded" :
-    isFull ? "Party is full" :
-    "Click Join to select your job and join this party";
+    isFull ? "Party is full — all slots taken" :
+    "Select a role below to join this party";
 
   embed.setFooter({ text: footerText });
 
-  let row: ActionRowBuilder<ButtonBuilder> | null = null;
+  const rows: ActionRowBuilder<ButtonBuilder>[] = [];
+
   if (isOpen) {
-    row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`join:${party.id}`)
-        .setLabel(isFull ? "Party Full" : "⚔ Join Party")
-        .setStyle(isFull ? ButtonStyle.Secondary : ButtonStyle.Success)
-        .setDisabled(isFull),
+    // Role slot counts — 2 tanks, 2 healers, 4 DPS per 8 players
+    const scale = content.requiredPlayers / 8;
+    const tankSlots   = Math.round(2 * scale);
+    const healerSlots = Math.round(2 * scale);
+    const dpsSlots    = content.requiredPlayers - tankSlots - healerSlots;
+
+    const tankCount   = members.filter(m => JOB_ROLES[m.member.job as Job] === "Tank").length;
+    const healerCount = members.filter(m => JOB_ROLES[m.member.job as Job] === "Healer").length;
+    const dpsCount    = members.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job])).length;
+
+    // Row 1: join by role
+    rows.push(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`join_role:${party.id}:tank`)
+          .setLabel(`🛡 Tank ${tankCount}/${tankSlots}`)
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(isFull || tankCount >= tankSlots),
+        new ButtonBuilder()
+          .setCustomId(`join_role:${party.id}:healer`)
+          .setLabel(`💚 Healer ${healerCount}/${healerSlots}`)
+          .setStyle(ButtonStyle.Success)
+          .setDisabled(isFull || healerCount >= healerSlots),
+        new ButtonBuilder()
+          .setCustomId(`join_role:${party.id}:dps`)
+          .setLabel(`⚔ DPS ${dpsCount}/${dpsSlots}`)
+          .setStyle(ButtonStyle.Danger)
+          .setDisabled(isFull || dpsCount >= dpsSlots),
+      ),
+    );
+
+    // Row 2: leader actions
+    rows.push(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`party_edit:${party.id}`)
+          .setLabel("✏️ Edit")
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId(`party_clear:${party.id}`)
+          .setLabel("✅ Clear")
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`party_disband:${party.id}`)
+          .setLabel("❌ Disband")
+          .setStyle(ButtonStyle.Danger),
+      ),
     );
   }
 
-  return { embed, row, attachment };
+  return { embed, rows, attachment };
 }
 
 export async function refreshPartyMessage(
@@ -138,12 +182,12 @@ export async function refreshPartyMessage(
     const channel = await (client as any).channels.fetch(party.channelId);
     if (!channel?.isTextBased()) return;
     const message = await channel.messages.fetch(party.messageId);
-    const { embed, row, attachment } = buildPartyEmbed(data);
+    const { embed, rows, attachment } = buildPartyEmbed(data);
     await message.edit({
       embeds: [embed],
       files: [attachment],
       attachments: [],
-      components: row ? [row] : [],
+      components: rows,
     });
   } catch {
     // Message may have been deleted — silently ignore

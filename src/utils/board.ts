@@ -26,11 +26,11 @@ export async function postToBoard(data: PartyEmbedData, client: Client) {
   const channel = await getBoardChannel(client, data.party.guildId);
   if (!channel) return;
 
-  const { embed, row, attachment } = buildPartyEmbed(data);
+  const { embed, rows, attachment } = buildPartyEmbed(data);
   const msg = await (channel as any).send({
     embeds: [embed],
     files: [attachment],
-    components: row ? [row] : [],
+    components: rows,
   });
 
   await db
@@ -48,12 +48,12 @@ export async function refreshBoardMessage(data: PartyEmbedData, client: Client) 
 
   try {
     const message = await (channel as any).messages.fetch(data.party.boardMessageId);
-    const { embed, row, attachment } = buildPartyEmbed(data);
+    const { embed, rows, attachment } = buildPartyEmbed(data);
     await message.edit({
       embeds: [embed],
       files: [attachment],
       attachments: [],
-      components: row ? [row] : [],
+      components: rows,
     });
   } catch {
     // Board message was deleted — silently ignore
