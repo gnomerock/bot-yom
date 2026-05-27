@@ -8,19 +8,26 @@
       "when": 1779774917103,
       "tag": "0000_supreme_doctor_doom",
       "breakpoints": true
-    }
-    ,{
+    },
+    {
       "idx": 1,
       "version": "7",
       "when": 1779900000000,
       "tag": "0001_party_finder",
       "breakpoints": true
-    }
-    ,{
+    },
+    {
       "idx": 2,
       "version": "7",
       "when": 1748300000000,
       "tag": "0002_party_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779864671777,
+      "tag": "0003_nifty_cammi",
       "breakpoints": true
     }
   ]
