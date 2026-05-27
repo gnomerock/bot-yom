@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import type { Command } from "../types";
 import { db } from "../db";
-import { content, parties, partyMembers } from "../db/schema";
+import { content, parties, partyMembers, guildSettings } from "../db/schema";
 import { JOBS, type Job } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
@@ -134,6 +134,15 @@ export default {
     const partyData = await getPartyWithDetails(party.id);
     if (!partyData) return;
 
+    // Look up board channel for this guild
+    const [settings] = await db
+      .select()
+      .from(guildSettings)
+      .where(eq(guildSettings.guildId, interaction.guildId!));
+    const boardChannelId = settings?.boardChannelId ?? null;
+    const inBoardChannel = boardChannelId === interaction.channelId;
+
+    // Post announcement in the current channel
     const { embed, rows, attachment } = buildPartyEmbed(partyData);
     const channel = interaction.channel;
     if (channel && !channel.isDMBased() && channel.isTextBased()) {
@@ -142,12 +151,24 @@ export default {
         files: [attachment],
         components: rows,
       });
-      await db.update(parties).set({ messageId: msg.id }).where(eq(parties.id, party.id));
+      await db.update(parties)
+        .set({
+          messageId: msg.id,
+          // If we're already in the board channel, reuse this message as the board post
+          ...(inBoardChannel && { boardMessageId: msg.id }),
+        })
+        .where(eq(parties.id, party.id));
     }
 
-    // Post to board channel — fetch fresh data so messageId is saved
-    const freshData = await getPartyWithDetails(party.id);
-    if (freshData) await postToBoard(freshData, interaction.client);
+    // Post to board channel only if it's a different channel
+    if (!inBoardChannel) {
+      try {
+        const freshData = await getPartyWithDetails(party.id);
+        if (freshData) await postToBoard(freshData, interaction.client);
+      } catch (err) {
+        console.error("Board post failed:", err);
+      }
+    }
 
   },
 } satisfies Command;

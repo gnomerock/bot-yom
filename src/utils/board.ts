@@ -26,17 +26,21 @@ export async function postToBoard(data: PartyEmbedData, client: Client) {
   const channel = await getBoardChannel(client, data.party.guildId);
   if (!channel) return;
 
-  const { embed, rows, attachment } = buildPartyEmbed(data);
-  const msg = await (channel as any).send({
-    embeds: [embed],
-    files: [attachment],
-    components: rows,
-  });
+  try {
+    const { embed, rows, attachment } = buildPartyEmbed(data);
+    const msg = await (channel as any).send({
+      embeds: [embed],
+      files: [attachment],
+      components: rows,
+    });
 
-  await db
-    .update(parties)
-    .set({ boardMessageId: msg.id })
-    .where(eq(parties.id, data.party.id));
+    await db
+      .update(parties)
+      .set({ boardMessageId: msg.id })
+      .where(eq(parties.id, data.party.id));
+  } catch (err) {
+    console.error(`Board post failed for party #${data.party.id}:`, err);
+  }
 }
 
 /** Edit the existing board post for a party. */
