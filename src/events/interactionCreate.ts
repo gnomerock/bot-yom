@@ -5,6 +5,20 @@ import { handleButton } from "../handlers/button";
 import { handleModal } from "../handlers/modal";
 import { db } from "../db";
 import { content } from "../db/schema";
+import type { InferSelectModel } from "drizzle-orm";
+
+// Cache content list in memory — refreshed once per hour
+let contentCache: InferSelectModel<typeof content>[] = [];
+let contentCacheAt = 0;
+const CONTENT_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+async function getContentList() {
+  if (Date.now() - contentCacheAt > CONTENT_CACHE_TTL) {
+    contentCache = await db.select().from(content);
+    contentCacheAt = Date.now();
+  }
+  return contentCache;
+}
 
 const errMsg = { content: "An error occurred.", flags: MessageFlags.Ephemeral };
 
@@ -94,7 +108,7 @@ export default {
           const query = focused.value.toLowerCase();
 
           if (focused.name === "content") {
-            const allContent = await db.select().from(content);
+            const allContent = await getContentList();
             const filtered = allContent
               .filter((c) => c.name.toLowerCase().includes(query))
               .slice(0, 25);

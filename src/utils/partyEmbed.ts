@@ -74,19 +74,25 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     .setTitle(`${statusIcon} Party #${party.id} — ${content.name}`)
     .setThumbnail(`attachment://${iconName}`)
     .addFields(
-      { name: "Type", value: TYPE_LABELS[content.type], inline: true },
+      { name: "Type", value: TYPE_LABELS[content.type as ContentType] ?? content.type, inline: true },
       { name: "Slots", value: `${members.length} / ${content.requiredPlayers}`, inline: true },
       { name: "Points", value: `+${content.pointsOnClear} on clear`, inline: true },
-      { name: "Leader", value: leaderName, inline: false },
+      { name: "Leader", value: leaderName || "Unknown", inline: false },
     );
 
   if (party.scheduledAt) {
-    const unix = Math.floor(party.scheduledAt.getTime() / 1000);
-    embed.addFields({
-      name: "📅 Scheduled",
-      value: `<t:${unix}:F> (<t:${unix}:R>)`,
-      inline: false,
-    });
+    // Drizzle may return timestamps as strings in some configurations
+    const scheduledDate = party.scheduledAt instanceof Date
+      ? party.scheduledAt
+      : new Date(party.scheduledAt as unknown as string);
+    const unix = Math.floor(scheduledDate.getTime() / 1000);
+    if (!isNaN(unix)) {
+      embed.addFields({
+        name: "📅 Scheduled",
+        value: `<t:${unix}:F> (<t:${unix}:R>)`,
+        inline: false,
+      });
+    }
   }
 
   const embedDesc = party.description ?? content.description;
