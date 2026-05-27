@@ -50,7 +50,7 @@ export type PartyEmbedData = {
     description: string | null;
     pointsOnClear: number;
   };
-  members: Array<{ user: { username: string }; member: { job: string } }>;
+  members: Array<{ user: { username: string; discordId: string }; member: { job: string } }>;
   leaderName: string;
   leaderDiscordId: string;
 };
@@ -103,7 +103,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   if (members.length > 0) {
     embed.addFields({
       name: `Members (${members.length} / ${content.requiredPlayers})`,
-      value: members.map(m => `${jobEmoji(m.member.job)} **${m.user.username}** — ${m.member.job}`).join("\n"),
+      value: members.map(m => `${jobEmoji(m.member.job)} <@${m.user.discordId}> — ${m.member.job}`).join("\n"),
     });
   }
 

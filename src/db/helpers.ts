@@ -19,7 +19,10 @@ export async function getPartyWithDetails(partyId: number) {
   if (!row) return null;
 
   const members = await db
-    .select({ user: users, member: partyMembers })
+    .select({
+      user: { username: users.username, discordId: users.discordId },
+      member: { job: partyMembers.job },
+    })
     .from(partyMembers)
     .innerJoin(users, eq(partyMembers.userId, users.id))
     .where(eq(partyMembers.partyId, partyId));

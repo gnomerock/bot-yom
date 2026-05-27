@@ -61,24 +61,32 @@ export default {
     const timeInput = interaction.options.getString("time")?.trim() ?? "";
     const description = interaction.options.getString("description")?.trim() || null;
 
-    // Both date and time must be provided together
-    if (!!dateInput !== !!timeInput) {
-      await interaction.editReply("❌ Please provide both **date** and **time**, or neither.");
-      return;
-    }
-
-    // Parse scheduled date/time
+    // Parse optional scheduled date/time — each field is independently optional
     let scheduledAt: Date | null = null;
-    if (dateInput && timeInput) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
-        await interaction.editReply(`❌ Invalid date **${dateInput}**. Pick from the suggestions or type \`YYYY-MM-DD\`.`);
+    if (dateInput || timeInput) {
+      // Validate date if provided, otherwise default to today (GMT+7)
+      let resolvedDate = dateInput;
+      if (resolvedDate && !/^\d{4}-\d{2}-\d{2}$/.test(resolvedDate)) {
+        await interaction.editReply(`❌ Invalid date **${resolvedDate}**. Pick from the suggestions or type \`YYYY-MM-DD\`.`);
         return;
       }
-      if (!/^\d{2}:\d{2}$/.test(timeInput)) {
-        await interaction.editReply(`❌ Invalid time **${timeInput}**. Pick from the suggestions or type \`HH:MM\`.`);
+      if (!resolvedDate) {
+        const nowGMT7 = new Date(Date.now() + 7 * 60 * 60 * 1000);
+        const y = nowGMT7.getUTCFullYear();
+        const m = String(nowGMT7.getUTCMonth() + 1).padStart(2, "0");
+        const d = String(nowGMT7.getUTCDate()).padStart(2, "0");
+        resolvedDate = `${y}-${m}-${d}`;
+      }
+
+      // Validate time if provided, otherwise default to 00:00
+      let resolvedTime = timeInput;
+      if (resolvedTime && !/^\d{2}:\d{2}$/.test(resolvedTime)) {
+        await interaction.editReply(`❌ Invalid time **${resolvedTime}**. Pick from the suggestions or type \`HH:MM\`.`);
         return;
       }
-      const parsed = new Date(`${dateInput}T${timeInput}:00+07:00`);
+      if (!resolvedTime) resolvedTime = "00:00";
+
+      const parsed = new Date(`${resolvedDate}T${resolvedTime}:00+07:00`);
       if (isNaN(parsed.getTime())) {
         await interaction.editReply("❌ Invalid date/time combination.");
         return;
