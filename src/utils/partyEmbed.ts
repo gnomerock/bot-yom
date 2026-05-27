@@ -32,7 +32,7 @@ export function dutyIconAttachment(type: ContentType, name = "duty-icon.png"): A
 }
 
 export type PartyEmbedData = {
-  party: { id: number; status: PartyStatus; channelId: string; messageId: string | null; description?: string | null };
+  party: { id: number; status: PartyStatus; channelId: string; messageId: string | null; description?: string | null; scheduledAt?: Date | null };
   content: {
     name: string;
     type: ContentType;
@@ -70,6 +70,15 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       { name: "Points", value: `+${content.pointsOnClear} on clear`, inline: true },
       { name: "Leader", value: leaderName, inline: false },
     );
+
+  if (party.scheduledAt) {
+    const unix = Math.floor(party.scheduledAt.getTime() / 1000);
+    embed.addFields({
+      name: "📅 Scheduled",
+      value: `<t:${unix}:F> (<t:${unix}:R>)`,
+      inline: false,
+    });
+  }
 
   const embedDesc = party.description ?? content.description;
   if (embedDesc) embed.setDescription(embedDesc);

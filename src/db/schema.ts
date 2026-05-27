@@ -64,6 +64,7 @@ export const parties = pgTable("parties", {
   channelId: text("channel_id").notNull(),
   messageId: text("message_id"),
   description: text("description"),
+  scheduledAt: timestamp("scheduled_at"),
   status: text("status").$type<PartyStatus>().notNull().default("open"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
