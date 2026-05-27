@@ -3,8 +3,6 @@ import type { BotClient } from "../types";
 import { handleSelectMenu } from "../handlers/selectMenu";
 import { handleButton } from "../handlers/button";
 import { handleModal } from "../handlers/modal";
-import { db } from "../db";
-import { content } from "../db/schema";
 
 const errMsg = { content: "An error occurred.", flags: MessageFlags.Ephemeral };
 
@@ -53,23 +51,7 @@ export default {
         await safeReply(interaction, error);
       }
     } else if (interaction.isAutocomplete()) {
-      try {
-        if (interaction.commandName === "create" && interaction.options.getFocused(true).name === "content") {
-          const query = interaction.options.getFocused().toLowerCase();
-          const allContent = await db.select().from(content);
-          const filtered = allContent
-            .filter((c) => c.name.toLowerCase().includes(query))
-            .slice(0, 25);
-          await interaction.respond(
-            filtered.map((c) => ({
-              name: `${c.name} · ${c.type === "high-end" ? "High-End" : "Raid"} · ${c.requiredPlayers}p`,
-              value: String(c.id),
-            })),
-          );
-        }
-      } catch (error) {
-        console.error(error);
-      }
+      // No autocomplete handlers currently registered
     }
   },
 };
