@@ -5,30 +5,13 @@ import {
 } from "discord.js";
 import type { Command } from "../types";
 import { db } from "../db";
-import { content, parties, partyMembers, users } from "../db/schema";
+import { content, parties, partyMembers } from "../db/schema";
 import { JOBS, type Job } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
 import { buildPartyEmbed } from "../utils/partyEmbed";
 import { postToBoard } from "../utils/board";
 import { notifyPartyCreated } from "../utils/webhook";
-
-/**
- * Parse a "YYYY-MM-DD HH:MM" UTC string into a Date.
- * Returns null if empty, or "invalid" if the format is wrong.
- */
-function parseScheduledAt(input: string): Date | null | "invalid" {
-  const raw = input.trim();
-  if (!raw) return null;
-
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/);
-  if (!match) return "invalid";
-
-  const [, y, mo, d, h, mi, s = "0"] = match;
-  const date = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
-  if (isNaN(date.getTime())) return "invalid";
-  return date;
-}
 
 export default {
   data: new SlashCommandBuilder()
@@ -50,9 +33,17 @@ export default {
     )
     .addStringOption((option) =>
       option
-        .setName("scheduled_at")
-        .setDescription("Scheduled date & time in UTC — format: YYYY-MM-DD HH:MM")
-        .setRequired(false),
+        .setName("date")
+        .setDescription("Scheduled date in UTC (pick from suggestions or type YYYY-MM-DD)")
+        .setRequired(false)
+        .setAutocomplete(true),
+    )
+    .addStringOption((option) =>
+      option
+        .setName("time")
+        .setDescription("Scheduled time in UTC (pick from suggestions or type HH:MM)")
+        .setRequired(false)
+        .setAutocomplete(true),
     )
     .addStringOption((option) =>
       option
@@ -67,18 +58,34 @@ export default {
 
     const contentId = parseInt(interaction.options.getString("content", true));
     const job = interaction.options.getString("job", true) as Job;
-    const scheduledAtInput = interaction.options.getString("scheduled_at") ?? "";
+    const dateInput = interaction.options.getString("date")?.trim() ?? "";
+    const timeInput = interaction.options.getString("time")?.trim() ?? "";
     const description = interaction.options.getString("description")?.trim() || null;
 
-    // Parse optional scheduled date/time
-    const scheduledAtResult = parseScheduledAt(scheduledAtInput);
-    if (scheduledAtResult === "invalid") {
-      await interaction.editReply(
-        `❌ Invalid date/time **${scheduledAtInput}**. Use \`YYYY-MM-DD HH:MM\` in UTC, e.g. \`2025-06-15 20:00\`.`,
-      );
+    // Both date and time must be provided together
+    if (!!dateInput !== !!timeInput) {
+      await interaction.editReply("❌ Please provide both **date** and **time**, or neither.");
       return;
     }
-    const scheduledAt = scheduledAtResult; // Date | null
+
+    // Parse scheduled date/time
+    let scheduledAt: Date | null = null;
+    if (dateInput && timeInput) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+        await interaction.editReply(`❌ Invalid date **${dateInput}**. Pick from the suggestions or type \`YYYY-MM-DD\`.`);
+        return;
+      }
+      if (!/^\d{2}:\d{2}$/.test(timeInput)) {
+        await interaction.editReply(`❌ Invalid time **${timeInput}**. Pick from the suggestions or type \`HH:MM\`.`);
+        return;
+      }
+      const parsed = new Date(`${dateInput}T${timeInput}:00Z`);
+      if (isNaN(parsed.getTime())) {
+        await interaction.editReply("❌ Invalid date/time combination.");
+        return;
+      }
+      scheduledAt = parsed;
+    }
 
     const user = await upsertUser(interaction.user.id, interaction.user.username);
 
@@ -131,7 +138,7 @@ export default {
       await db.update(parties).set({ messageId: msg.id }).where(eq(parties.id, party.id));
     }
 
-    // Post to board channel (if configured) — fetch fresh data so messageId is set
+    // Post to board channel — fetch fresh data so messageId is saved
     const freshData = await getPartyWithDetails(party.id);
     if (freshData) await postToBoard(freshData, interaction.client);
 

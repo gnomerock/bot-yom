@@ -76,12 +76,15 @@ export default {
 
       const slots = slotRow(jobs, c.requiredPlayers);
       const countLine = `${slots}  ${memberCount}/${c.requiredPlayers}${isFull ? " 🔒" : ""}`;
+      const scheduledLine = party.scheduledAt
+        ? `📅 <t:${Math.floor(party.scheduledAt.getTime() / 1000)}:F>\n`
+        : "";
       const descLine = party.description ? `*"${party.description}"*\n` : "";
       const metaLine = `${typeTag} · Leader: **${leader.username}**${link}`;
 
       return {
         name: `#${party.id} — ${c.name}`,
-        value: `${countLine}\n${descLine}${metaLine}`,
+        value: `${countLine}\n${scheduledLine}${descLine}${metaLine}`,
         inline: false,
       };
     });
