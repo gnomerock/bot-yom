@@ -56,6 +56,12 @@ export const content = pgTable("content", {
   pointsOnClear: integer("points_on_clear").notNull().default(100),
 });
 
+export const guildSettings = pgTable("guild_settings", {
+  id: serial("id").primaryKey(),
+  guildId: text("guild_id").notNull().unique(),
+  boardChannelId: text("board_channel_id"),
+});
+
 export const parties = pgTable("parties", {
   id: serial("id").primaryKey(),
   contentId: integer("content_id").notNull().references(() => content.id),
@@ -63,6 +69,7 @@ export const parties = pgTable("parties", {
   guildId: text("guild_id").notNull(),
   channelId: text("channel_id").notNull(),
   messageId: text("message_id"),
+  boardMessageId: text("board_message_id"),
   description: text("description"),
   scheduledAt: timestamp("scheduled_at"),
   status: text("status").$type<PartyStatus>().notNull().default("open"),

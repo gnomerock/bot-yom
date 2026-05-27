@@ -8,7 +8,7 @@ import { db } from "../db";
 import { parties, partyMembers, content } from "../db/schema";
 import { eq, and, count } from "drizzle-orm";
 import { upsertUser, awardPoints, getPartyWithDetails } from "../db/helpers";
-import { refreshPartyMessage } from "../utils/partyEmbed";
+import { refreshAllPartyMessages } from "../utils/board";
 
 export default {
   data: new SlashCommandBuilder()
@@ -77,7 +77,7 @@ export default {
 
     const fullData = await getPartyWithDetails(partyId);
     if (fullData) {
-      await refreshPartyMessage(
+      await refreshAllPartyMessages(
         { party: { ...fullData.party, status }, content: fullData.content, members: fullData.members, leaderName: fullData.leaderName },
         interaction.client,
       );

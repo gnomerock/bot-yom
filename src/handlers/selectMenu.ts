@@ -8,7 +8,7 @@ import { partyMembers } from "../db/schema";
 import { JOBS, JOB_ROLES, type Job } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
-import { refreshPartyMessage } from "../utils/partyEmbed";
+import { refreshAllPartyMessages } from "../utils/board";
 
 export async function handleSelectMenu(interaction: StringSelectMenuInteraction) {
   const [action, param] = interaction.customId.split(":");
@@ -53,7 +53,7 @@ async function handleJoinJobSelect(
 
   const updatedData = await getPartyWithDetails(partyId);
   if (updatedData) {
-    await refreshPartyMessage(updatedData, interaction.client);
+    await refreshAllPartyMessages(updatedData, interaction.client);
   }
 
   await interaction.editReply({

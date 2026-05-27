@@ -29,6 +29,13 @@
       "when": 1779864671777,
       "tag": "0003_nifty_cammi",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779867264102,
+      "tag": "0004_overrated_exodus",
+      "breakpoints": true
     }
   ]
 }

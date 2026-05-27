@@ -6,7 +6,7 @@ import { db } from "../db";
 import { parties } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
-import { refreshPartyMessage } from "../utils/partyEmbed";
+import { refreshAllPartyMessages } from "../utils/board";
 
 export async function handleModal(interaction: ModalSubmitInteraction) {
   const parts = interaction.customId.split(":");
@@ -40,7 +40,7 @@ async function handleEditModal(interaction: ModalSubmitInteraction, partyId: num
 
   const updated = await getPartyWithDetails(partyId);
   if (updated) {
-    await refreshPartyMessage(updated, interaction.client);
+    await refreshAllPartyMessages(updated, interaction.client);
   }
 
   await interaction.editReply(`✅ Party #${partyId} description updated.`);

@@ -7,7 +7,7 @@ import { db } from "../db";
 import { parties, partyMembers } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
-import { refreshPartyMessage } from "../utils/partyEmbed";
+import { refreshAllPartyMessages } from "../utils/board";
 
 export default {
   data: new SlashCommandBuilder()
@@ -59,7 +59,7 @@ export default {
 
     const updated = await getPartyWithDetails(partyId);
     if (updated) {
-      await refreshPartyMessage(updated, interaction.client);
+      await refreshAllPartyMessages(updated, interaction.client);
     }
 
     await interaction.editReply(`Left Party #${partyId}.`);

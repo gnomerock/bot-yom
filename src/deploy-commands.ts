@@ -9,8 +9,10 @@ import edit from "./commands/edit";
 import leave from "./commands/leave";
 import lb from "./commands/lb";
 import view from "./commands/view";
+import board from "./commands/board";
+import unboard from "./commands/unboard";
 
-const commands = [ping, help, list, create, join, done, edit, leave, lb, view].map((c) => c.data.toJSON());
+const commands = [ping, help, list, create, join, done, edit, leave, lb, view, board, unboard].map((c) => c.data.toJSON());
 
 export async function deployCommands() {
   const rest = new REST().setToken(process.env.DISCORD_TOKEN!);

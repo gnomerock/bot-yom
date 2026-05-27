@@ -10,6 +10,7 @@ import { JOBS, type Job } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
 import { buildPartyEmbed } from "../utils/partyEmbed";
+import { postToBoard } from "../utils/board";
 import { notifyPartyCreated } from "../utils/webhook";
 
 /**
@@ -129,6 +130,10 @@ export default {
       });
       await db.update(parties).set({ messageId: msg.id }).where(eq(parties.id, party.id));
     }
+
+    // Post to board channel (if configured) — fetch fresh data so messageId is set
+    const freshData = await getPartyWithDetails(party.id);
+    if (freshData) await postToBoard(freshData, interaction.client);
 
     await notifyPartyCreated(partyData);
   },

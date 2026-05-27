@@ -32,7 +32,16 @@ export function dutyIconAttachment(type: ContentType, name = "duty-icon.png"): A
 }
 
 export type PartyEmbedData = {
-  party: { id: number; status: PartyStatus; channelId: string; messageId: string | null; description?: string | null; scheduledAt?: Date | null };
+  party: {
+    id: number;
+    status: PartyStatus;
+    guildId: string;
+    channelId: string;
+    messageId: string | null;
+    boardMessageId?: string | null;
+    description?: string | null;
+    scheduledAt?: Date | null;
+  };
   content: {
     name: string;
     type: ContentType;

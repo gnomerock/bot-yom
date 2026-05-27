@@ -10,6 +10,8 @@ import edit from "./commands/edit";
 import leave from "./commands/leave";
 import lb from "./commands/lb";
 import view from "./commands/view";
+import board from "./commands/board";
+import unboard from "./commands/unboard";
 import ready from "./events/ready";
 import interactionCreate from "./events/interactionCreate";
 import { deployCommands } from "./deploy-commands";
@@ -31,7 +33,7 @@ async function startBot() {
 
   client.commands = new Collection<string, Command>();
 
-  for (const command of [ping, help, list, create, join, done, edit, leave, lb, view]) {
+  for (const command of [ping, help, list, create, join, done, edit, leave, lb, view, board, unboard]) {
     client.commands.set(command.data.name, command);
   }
 
