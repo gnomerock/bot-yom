@@ -16,6 +16,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName("create")
     .setDescription("Create a new party (1 active party per user)")
+    .setDMPermission(false)
     .addStringOption((option) =>
       option
         .setName("content")

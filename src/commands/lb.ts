@@ -7,7 +7,8 @@ import { eq, desc } from "drizzle-orm";
 export default {
   data: new SlashCommandBuilder()
     .setName("lb")
-    .setDescription("Show the server leaderboard"),
+    .setDescription("Show the server leaderboard")
+    .setDMPermission(false),
 
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();

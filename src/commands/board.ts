@@ -13,7 +13,8 @@ export default {
   data: new SlashCommandBuilder()
     .setName("board")
     .setDescription("Set this channel as the party board — new parties will be posted here")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDMPermission(false),
 
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });

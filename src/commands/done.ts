@@ -14,6 +14,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName("done")
     .setDescription("End your active party")
+    .setDMPermission(false)
     .addStringOption((opt) =>
       opt
         .setName("status")
