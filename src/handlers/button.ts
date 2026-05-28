@@ -34,6 +34,8 @@ export async function handleButton(interaction: ButtonInteraction) {
     await handlePartyClearButton(interaction, parseInt(parts[1]));
   } else if (action === "party_disband") {
     await handlePartyDisbandButton(interaction, parseInt(parts[1]));
+  } else if (action === "party_leave") {
+    await handlePartyLeaveButton(interaction, parseInt(parts[1]));
   }
 }
 
@@ -180,6 +182,48 @@ async function handlePartyClearButton(interaction: ButtonInteraction, partyId: n
   await interaction.editReply(
     `🎉 **Party #${partyId} cleared!** +${row.content.pointsOnClear} points awarded to all ${memberCount} members.`,
   );
+}
+
+// ── Leave (member only, not leader) ─────────────────────────────────────────
+
+async function handlePartyLeaveButton(interaction: ButtonInteraction, partyId: number) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const user = await upsertUser(interaction.user.id, interaction.user.username);
+
+  const [party] = await db
+    .select()
+    .from(parties)
+    .where(and(eq(parties.id, partyId), eq(parties.status, "open")));
+
+  if (!party) {
+    await interaction.editReply("Party not found or already closed.");
+    return;
+  }
+
+  if (party.leaderId === user.id) {
+    await interaction.editReply("You're the party leader — use **Disband** to close the party instead.");
+    return;
+  }
+
+  const [membership] = await db
+    .select()
+    .from(partyMembers)
+    .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
+
+  if (!membership) {
+    await interaction.editReply("You're not in this party.");
+    return;
+  }
+
+  await db.delete(partyMembers).where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
+
+  const fullData = await getPartyWithDetails(partyId);
+  if (fullData) {
+    await refreshAllPartyMessages(fullData, interaction.client);
+  }
+
+  await interaction.editReply(`You've left **Party #${partyId}**.`);
 }
 
 // ── Disband (leader only) ────────────────────────────────────────────────────

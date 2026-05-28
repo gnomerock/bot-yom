@@ -128,7 +128,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     const healerCount = members.filter(m => JOB_ROLES[m.member.job as Job] === "Healer").length;
     const dpsCount    = members.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job])).length;
 
-    // Row 1: join by role
+    // Row 1: join by role + leave
     rows.push(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
@@ -146,6 +146,10 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
           .setLabel(`⚔ DPS ${dpsCount}/${dpsSlots}`)
           .setStyle(ButtonStyle.Danger)
           .setDisabled(isFull || dpsCount >= dpsSlots),
+        new ButtonBuilder()
+          .setCustomId(`party_leave:${party.id}`)
+          .setLabel("🚪 Leave")
+          .setStyle(ButtonStyle.Secondary),
       ),
     );
 
