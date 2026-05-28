@@ -57,25 +57,22 @@ async function handleJoinRoleButton(
     return;
   }
 
-  const [{ value: memberCount }] = await db
-    .select({ value: count() })
-    .from(partyMembers)
-    .where(eq(partyMembers.partyId, partyId));
-
-  if (memberCount >= row.content.requiredPlayers) {
-    await interaction.editReply("This party is already full.");
-    return;
-  }
-
   const user = await upsertUser(interaction.user.id, interaction.user.username);
   const [alreadyMember] = await db
     .select()
     .from(partyMembers)
     .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
 
-  if (alreadyMember) {
-    await interaction.editReply("You're already in this party!");
-    return;
+  if (!alreadyMember) {
+    const [{ value: memberCount }] = await db
+      .select({ value: count() })
+      .from(partyMembers)
+      .where(eq(partyMembers.partyId, partyId));
+
+    if (memberCount >= row.content.requiredPlayers) {
+      await interaction.editReply("This party is already full.");
+      return;
+    }
   }
 
   const jobs = ROLE_JOBS[role] ?? JOBS;
@@ -87,7 +84,9 @@ async function handleJoinRoleButton(
     .addOptions(jobs.map((job) => ({ label: job, description: JOB_ROLES[job as keyof typeof JOB_ROLES], value: job })));
 
   await interaction.editReply({
-    content: `**Joining Party #${partyId}: ${row.content.name}** — Select your ${roleLabel} job:`,
+    content: alreadyMember
+      ? `**Change job in Party #${partyId}** — Select your new ${roleLabel} job:`
+      : `**Joining Party #${partyId}: ${row.content.name}** — Select your ${roleLabel} job:`,
     components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)],
   });
 }
