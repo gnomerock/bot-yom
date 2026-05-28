@@ -13,7 +13,8 @@ export default {
   data: new SlashCommandBuilder()
     .setName("unboard")
     .setDescription("Unregister the party board for this server")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDMPermission(false),
 
   async execute(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });

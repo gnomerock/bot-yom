@@ -38,16 +38,21 @@ async function handleJoinJobSelect(
     .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
 
   if (alreadyMember) {
-    await interaction.editReply({ content: "You're already in this party!", components: [] });
-    return;
+    if (alreadyMember.job === job) {
+      await interaction.editReply({ content: `You're already in this party as **${job}**.`, components: [] });
+      return;
+    }
+    await db
+      .update(partyMembers)
+      .set({ job })
+      .where(eq(partyMembers.id, alreadyMember.id));
+  } else {
+    if (partyData.members.length >= partyData.content.requiredPlayers) {
+      await interaction.editReply({ content: "This party is now full.", components: [] });
+      return;
+    }
+    await db.insert(partyMembers).values({ partyId, userId: user.id, job });
   }
-
-  if (partyData.members.length >= partyData.content.requiredPlayers) {
-    await interaction.editReply({ content: "This party is now full.", components: [] });
-    return;
-  }
-
-  await db.insert(partyMembers).values({ partyId, userId: user.id, job });
 
   const updatedData = await getPartyWithDetails(partyId);
   if (updatedData) {
@@ -55,7 +60,9 @@ async function handleJoinJobSelect(
   }
 
   await interaction.editReply({
-    content: `✅ Joined Party #${partyId} as **${job}**!`,
+    content: alreadyMember
+      ? `✅ Changed job to **${job}**!`
+      : `✅ Joined Party #${partyId} as **${job}**!`,
     components: [],
   });
 }

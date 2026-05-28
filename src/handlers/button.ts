@@ -59,25 +59,22 @@ async function handleJoinRoleButton(
     return;
   }
 
-  const [{ value: memberCount }] = await db
-    .select({ value: count() })
-    .from(partyMembers)
-    .where(eq(partyMembers.partyId, partyId));
-
-  if (memberCount >= row.content.requiredPlayers) {
-    await interaction.editReply("This party is already full.");
-    return;
-  }
-
   const user = await upsertUser(interaction.user.id, interaction.user.username);
   const [alreadyMember] = await db
     .select()
     .from(partyMembers)
     .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
 
-  if (alreadyMember) {
-    await interaction.editReply("You're already in this party!");
-    return;
+  if (!alreadyMember) {
+    const [{ value: memberCount }] = await db
+      .select({ value: count() })
+      .from(partyMembers)
+      .where(eq(partyMembers.partyId, partyId));
+
+    if (memberCount >= row.content.requiredPlayers) {
+      await interaction.editReply("This party is already full.");
+      return;
+    }
   }
 
   const jobs = ROLE_JOBS[role] ?? JOBS;
@@ -89,7 +86,9 @@ async function handleJoinRoleButton(
     .addOptions(jobs.map((job) => ({ label: job, description: JOB_ROLES[job as keyof typeof JOB_ROLES], value: job })));
 
   await interaction.editReply({
-    content: `**Joining Party #${partyId}: ${row.content.name}** — Select your ${roleLabel} job:`,
+    content: alreadyMember
+      ? `**Change job in Party #${partyId}** — Select your new ${roleLabel} job:`
+      : `**Joining Party #${partyId}: ${row.content.name}** — Select your ${roleLabel} job:`,
     components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu)],
   });
 }
@@ -112,6 +111,20 @@ async function handlePartyEditButton(interaction: ButtonInteraction, partyId: nu
     return;
   }
 
+  // Pre-fill existing scheduled date/time in GMT+7
+  let existingDate = "";
+  let existingTime = "";
+  if (party.scheduledAt) {
+    const gmt7 = new Date(party.scheduledAt.getTime() + 7 * 60 * 60 * 1000);
+    const y = gmt7.getUTCFullYear();
+    const mo = String(gmt7.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(gmt7.getUTCDate()).padStart(2, "0");
+    const h = String(gmt7.getUTCHours()).padStart(2, "0");
+    const mi = String(gmt7.getUTCMinutes()).padStart(2, "0");
+    existingDate = `${y}-${mo}-${d}`;
+    existingTime = `${h}:${mi}`;
+  }
+
   const modal = new ModalBuilder()
     .setCustomId(`edit_modal:${partyId}`)
     .setTitle(`Edit Party #${partyId}`)
@@ -125,6 +138,24 @@ async function handlePartyEditButton(interaction: ButtonInteraction, partyId: nu
           .setPlaceholder("e.g. LF exp. players, must know mechanics. Prog-friendly.")
           .setRequired(false)
           .setMaxLength(500),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("date")
+          .setLabel("Date GMT+7 (YYYY-MM-DD, blank to clear)")
+          .setStyle(TextInputStyle.Short)
+          .setValue(existingDate)
+          .setPlaceholder("e.g. 2026-05-28")
+          .setRequired(false),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("time")
+          .setLabel("Time GMT+7 (HH:MM, blank to clear)")
+          .setStyle(TextInputStyle.Short)
+          .setValue(existingTime)
+          .setPlaceholder("e.g. 20:00")
+          .setRequired(false),
       ),
     );
 
