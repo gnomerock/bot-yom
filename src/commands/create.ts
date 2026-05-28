@@ -146,18 +146,22 @@ export default {
     const { embed, rows, attachment } = buildPartyEmbed(partyData);
     const channel = interaction.channel;
     if (channel && !channel.isDMBased() && channel.isTextBased()) {
-      const msg = await channel.send({
-        embeds: [embed],
-        files: [attachment],
-        components: rows,
-      });
-      await db.update(parties)
-        .set({
-          messageId: msg.id,
-          // If we're already in the board channel, reuse this message as the board post
-          ...(inBoardChannel && { boardMessageId: msg.id }),
-        })
-        .where(eq(parties.id, party.id));
+      try {
+        const msg = await channel.send({
+          embeds: [embed],
+          files: [attachment],
+          components: rows,
+        });
+        await db.update(parties)
+          .set({
+            messageId: msg.id,
+            // If we're already in the board channel, reuse this message as the board post
+            ...(inBoardChannel && { boardMessageId: msg.id }),
+          })
+          .where(eq(parties.id, party.id));
+      } catch (err) {
+        console.error("Channel post failed:", err);
+      }
     }
 
     // Post to board channel only if it's a different channel

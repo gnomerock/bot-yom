@@ -23,10 +23,10 @@ async function getBoardChannel(client: Client, guildId: string) {
 
 /** Post a new party card to the board channel and save the boardMessageId. */
 export async function postToBoard(data: PartyEmbedData, client: Client) {
-  const channel = await getBoardChannel(client, data.party.guildId);
-  if (!channel) return;
-
   try {
+    const channel = await getBoardChannel(client, data.party.guildId);
+    if (!channel) return;
+
     const { embed, rows, attachment } = buildPartyEmbed(data);
     const msg = await (channel as any).send({
       embeds: [embed],
