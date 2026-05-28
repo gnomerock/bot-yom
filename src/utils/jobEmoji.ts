@@ -90,11 +90,16 @@ export function jobEmoji(job: Job | string): string {
   return emojiMap.get(job as Job) ?? "";
 }
 
-/** Returns the emoji for a content type, falling back to the "raid" emoji or a default. */
+// Normalize type aliases before emoji lookup
+const CONTENT_TYPE_ALIASES: Record<string, ContentType> = {
+  "highend": "high-end",
+};
+
 export function contentTypeEmoji(type: ContentType | string): string {
-  return (
-    contentEmojiMap.get(type as ContentType) ??
-    contentEmojiMap.get("raid") ??
-    "⚔️"
-  );
+  const normalized = (CONTENT_TYPE_ALIASES[type as string] ?? type) as ContentType;
+  // Only fall back to raid emoji when the type IS raid (or unrecognised non-highend types)
+  if (normalized === "high-end") {
+    return contentEmojiMap.get("high-end") ?? "⚔️";
+  }
+  return contentEmojiMap.get("raid") ?? "⚔️";
 }

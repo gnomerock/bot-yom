@@ -12,23 +12,26 @@ import { jobEmoji, contentTypeEmoji, roleEmojiForButton, roleEmojiString } from 
 
 const publicDir = join(import.meta.dir, "../..", "public");
 
-const DUTY_ICONS: Record<ContentType, string> = {
-  "raid": "raid.png",
-  "high-end": "high-end.png",
+const DUTY_ICONS: Record<string, string> = {
+  "raid":     "raid.png",
+  "high-end": "highend.png",
+  "highend":  "highend.png",
 };
 
-const TYPE_LABELS: Record<ContentType, string> = {
-  "raid": "Raid (Normal)",
+const TYPE_LABELS: Record<string, string> = {
+  "raid":     "Raid (Normal)",
   "high-end": "High-End (Savage / Ultimate)",
+  "highend":  "High-End (Savage / Ultimate)",
 };
 
-const TYPE_COLORS: Record<ContentType, number> = {
-  "raid": 0x5865f2,
+const TYPE_COLORS: Record<string, number> = {
+  "raid":     0x5865f2,
   "high-end": 0xff6b35,
+  "highend":  0xff6b35,
 };
 
-export function dutyIconAttachment(type: ContentType, name = "duty-icon.png"): AttachmentBuilder {
-  const file = DUTY_ICONS[type as ContentType] ?? "raid.png";
+export function dutyIconAttachment(type: string | null | undefined, name = "duty-icon.png"): AttachmentBuilder {
+  const file = (type && DUTY_ICONS[type]) ?? "raid.png";
   return new AttachmentBuilder(join(publicDir, "duties", file), { name });
 }
 
