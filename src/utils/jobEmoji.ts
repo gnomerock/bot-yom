@@ -46,12 +46,15 @@ const emojiMap = new Map<Job, string>();
 // ContentType → <:name:id> emoji string (populated at startup)
 const contentEmojiMap = new Map<ContentType, string>();
 
+// Role → emoji component data for buttons (populated at startup)
+const roleEmojiMap = new Map<string, { id: string; name: string }>();
+
 export function setupJobEmojis(client: Client) {
   const cache = client.application?.emojis.cache;
   if (!cache) return;
 
   for (const emoji of cache.values()) {
-    if (!emoji.name) continue;
+    if (!emoji.name || !emoji.id) continue;
     const name = emoji.name.toLowerCase();
     const str = emoji.animated
       ? `<a:${emoji.name}:${emoji.id}>`
@@ -64,7 +67,16 @@ export function setupJobEmojis(client: Client) {
     // Content type emojis
     const contentType = CONTENT_EMOJI_NAMES[name];
     if (contentType) contentEmojiMap.set(contentType, str);
+
+    // Role emojis for buttons
+    if (name === "tank" || name === "healer" || name === "dps") {
+      roleEmojiMap.set(name, { id: emoji.id, name: emoji.name });
+    }
   }
+}
+
+export function roleEmojiForButton(role: "tank" | "healer" | "dps"): { id: string; name: string } | undefined {
+  return roleEmojiMap.get(role);
 }
 
 export function jobEmoji(job: Job | string): string {

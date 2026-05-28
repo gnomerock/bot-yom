@@ -103,7 +103,7 @@ export default {
       }
     } else if (interaction.isAutocomplete()) {
       try {
-        if (interaction.commandName === "create") {
+        if (interaction.commandName === "create" || interaction.commandName === "edit") {
           const focused = interaction.options.getFocused(true);
           const query = focused.value.toLowerCase();
 

@@ -8,7 +8,7 @@ import {
 import { join } from "node:path";
 import type { ContentType, PartyStatus, Job } from "../db/schema";
 import { JOB_ROLES } from "../db/schema";
-import { jobEmoji, contentTypeEmoji } from "./jobEmoji";
+import { jobEmoji, contentTypeEmoji, roleEmojiForButton } from "./jobEmoji";
 
 const publicDir = join(import.meta.dir, "../..", "public");
 
@@ -97,8 +97,8 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     }
   }
 
-  const embedDesc = party.description ?? content.description;
-  if (embedDesc) embed.setDescription(embedDesc);
+  const descParts = [content.description, party.description].filter(Boolean);
+  if (descParts.length > 0) embed.setDescription(descParts.join("\n\n"));
 
   if (members.length > 0) {
     embed.addFields({
@@ -128,25 +128,34 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     const healerCount = members.filter(m => JOB_ROLES[m.member.job as Job] === "Healer").length;
     const dpsCount    = members.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job])).length;
 
+    const tankEmoji   = roleEmojiForButton("tank");
+    const healerEmoji = roleEmojiForButton("healer");
+    const dpsEmoji    = roleEmojiForButton("dps");
+
+    const tankBtn = new ButtonBuilder()
+      .setCustomId(`join_role:${party.id}:tank`)
+      .setLabel(`Tank ${tankCount}/${tankSlots}`)
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(isFull || tankCount >= tankSlots);
+    if (tankEmoji) tankBtn.setEmoji(tankEmoji); else tankBtn.setLabel(`🛡 Tank ${tankCount}/${tankSlots}`);
+
+    const healerBtn = new ButtonBuilder()
+      .setCustomId(`join_role:${party.id}:healer`)
+      .setLabel(`Healer ${healerCount}/${healerSlots}`)
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(isFull || healerCount >= healerSlots);
+    if (healerEmoji) healerBtn.setEmoji(healerEmoji); else healerBtn.setLabel(`💚 Healer ${healerCount}/${healerSlots}`);
+
+    const dpsBtn = new ButtonBuilder()
+      .setCustomId(`join_role:${party.id}:dps`)
+      .setLabel(`DPS ${dpsCount}/${dpsSlots}`)
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(isFull || dpsCount >= dpsSlots);
+    if (dpsEmoji) dpsBtn.setEmoji(dpsEmoji); else dpsBtn.setLabel(`⚔ DPS ${dpsCount}/${dpsSlots}`);
+
     // Row 1: join by role
     rows.push(
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`join_role:${party.id}:tank`)
-          .setLabel(`🛡 Tank ${tankCount}/${tankSlots}`)
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(isFull || tankCount >= tankSlots),
-        new ButtonBuilder()
-          .setCustomId(`join_role:${party.id}:healer`)
-          .setLabel(`💚 Healer ${healerCount}/${healerSlots}`)
-          .setStyle(ButtonStyle.Success)
-          .setDisabled(isFull || healerCount >= healerSlots),
-        new ButtonBuilder()
-          .setCustomId(`join_role:${party.id}:dps`)
-          .setLabel(`⚔ DPS ${dpsCount}/${dpsSlots}`)
-          .setStyle(ButtonStyle.Danger)
-          .setDisabled(isFull || dpsCount >= dpsSlots),
-      ),
+      new ActionRowBuilder<ButtonBuilder>().addComponents(tankBtn, healerBtn, dpsBtn),
     );
 
     // Row 2: leader actions
