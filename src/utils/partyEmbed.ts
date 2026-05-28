@@ -8,7 +8,7 @@ import {
 import { join } from "node:path";
 import type { ContentType, PartyStatus, Job } from "../db/schema";
 import { JOB_ROLES } from "../db/schema";
-import { jobEmoji, contentTypeEmoji, roleEmojiForButton } from "./jobEmoji";
+import { jobEmoji, contentTypeEmoji, roleEmojiForButton, roleEmojiString } from "./jobEmoji";
 
 const publicDir = join(import.meta.dir, "../..", "public");
 
@@ -100,12 +100,43 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   const descParts = [content.description, party.description].filter(Boolean);
   if (descParts.length > 0) embed.setDescription(descParts.join("\n\n"));
 
-  if (members.length > 0) {
-    embed.addFields({
-      name: `Members (${members.length} / ${content.requiredPlayers})`,
-      value: members.map(m => `${jobEmoji(m.member.job)} <@${m.user.discordId}> — ${m.member.job}`).join("\n"),
-    });
+  // Role slot counts — 2 tanks, 2 healers, 4 DPS per 8 players
+  const scale = content.requiredPlayers / 8;
+  const tankSlots   = Math.round(2 * scale);
+  const healerSlots = Math.round(2 * scale);
+  const dpsSlots    = content.requiredPlayers - tankSlots - healerSlots;
+
+  const tankMembers   = members.filter(m => JOB_ROLES[m.member.job as Job] === "Tank");
+  const healerMembers = members.filter(m => JOB_ROLES[m.member.job as Job] === "Healer");
+  const dpsMembers    = members.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job]));
+
+  const tankCount   = tankMembers.length;
+  const healerCount = healerMembers.length;
+  const dpsCount    = dpsMembers.length;
+
+  // Build full slot grid — filled slots show job + user, empty slots show "free"
+  const te = roleEmojiString("tank");
+  const he = roleEmojiString("healer");
+  const de = roleEmojiString("dps");
+
+  const slotLines: string[] = [];
+  for (let i = 0; i < tankSlots; i++) {
+    const m = tankMembers[i];
+    slotLines.push(m ? `${te} ${jobEmoji(m.member.job)} <@${m.user.discordId}> — ${m.member.job}` : `${te} — *free*`);
   }
+  for (let i = 0; i < healerSlots; i++) {
+    const m = healerMembers[i];
+    slotLines.push(m ? `${he} ${jobEmoji(m.member.job)} <@${m.user.discordId}> — ${m.member.job}` : `${he} — *free*`);
+  }
+  for (let i = 0; i < dpsSlots; i++) {
+    const m = dpsMembers[i];
+    slotLines.push(m ? `${de} ${jobEmoji(m.member.job)} <@${m.user.discordId}> — ${m.member.job}` : `${de} — *free*`);
+  }
+
+  embed.addFields({
+    name: `Members (${members.length} / ${content.requiredPlayers})`,
+    value: slotLines.join("\n"),
+  });
 
   const footerText =
     party.status === "cleared" ? "🎉 Party cleared!" :
@@ -118,16 +149,6 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   const rows: ActionRowBuilder<ButtonBuilder>[] = [];
 
   if (isOpen) {
-    // Role slot counts — 2 tanks, 2 healers, 4 DPS per 8 players
-    const scale = content.requiredPlayers / 8;
-    const tankSlots   = Math.round(2 * scale);
-    const healerSlots = Math.round(2 * scale);
-    const dpsSlots    = content.requiredPlayers - tankSlots - healerSlots;
-
-    const tankCount   = members.filter(m => JOB_ROLES[m.member.job as Job] === "Tank").length;
-    const healerCount = members.filter(m => JOB_ROLES[m.member.job as Job] === "Healer").length;
-    const dpsCount    = members.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job])).length;
-
     const tankEmoji   = roleEmojiForButton("tank");
     const healerEmoji = roleEmojiForButton("healer");
     const dpsEmoji    = roleEmojiForButton("dps");

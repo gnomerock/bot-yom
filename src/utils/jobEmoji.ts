@@ -79,6 +79,13 @@ export function roleEmojiForButton(role: "tank" | "healer" | "dps"): { id: strin
   return roleEmojiMap.get(role);
 }
 
+const ROLE_EMOJI_FALLBACK: Record<string, string> = { tank: "🛡", healer: "💚", dps: "⚔" };
+
+export function roleEmojiString(role: "tank" | "healer" | "dps"): string {
+  const e = roleEmojiMap.get(role);
+  return e ? `<:${e.name}:${e.id}>` : ROLE_EMOJI_FALLBACK[role];
+}
+
 export function jobEmoji(job: Job | string): string {
   return emojiMap.get(job as Job) ?? "";
 }

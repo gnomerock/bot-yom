@@ -141,7 +141,7 @@ async function handlePartyEditButton(interaction: ButtonInteraction, partyId: nu
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId("date")
-          .setLabel("Scheduled Date GMT+7 (YYYY-MM-DD, blank to clear)")
+          .setLabel("Date GMT+7 (YYYY-MM-DD, blank to clear)")
           .setStyle(TextInputStyle.Short)
           .setValue(existingDate)
           .setPlaceholder("e.g. 2026-05-28")
@@ -150,7 +150,7 @@ async function handlePartyEditButton(interaction: ButtonInteraction, partyId: nu
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId("time")
-          .setLabel("Scheduled Time GMT+7 (HH:MM, blank to clear)")
+          .setLabel("Time GMT+7 (HH:MM, blank to clear)")
           .setStyle(TextInputStyle.Short)
           .setValue(existingTime)
           .setPlaceholder("e.g. 20:00")

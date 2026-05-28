@@ -1,14 +1,9 @@
 import { Events, Client } from "discord.js";
 import { join } from "node:path";
+import { readdirSync } from "node:fs";
 import { setupJobEmojis } from "../utils/jobEmoji";
 
-const publicDir = join(import.meta.dir, "../..", "public");
-
-const ROLE_EMOJI_FILES = [
-  { name: "tank",   file: "tank.png" },
-  { name: "healer", file: "healer.png" },
-  { name: "dps",    file: "dps.png" },
-] as const;
+const jobsDir = join(import.meta.dir, "../..", "public", "jobs");
 
 export default {
   name: Events.ClientReady,
@@ -16,15 +11,17 @@ export default {
   async execute(client: Client) {
     await client.application?.emojis.fetch();
 
-    // Auto-create role emojis from public/jobs/ if not yet uploaded
+    // Auto-create any missing application emojis from public/jobs/*.png
     const existingNames = new Set(
       client.application?.emojis.cache.map((e) => e.name?.toLowerCase()) ?? [],
     );
-    for (const { name, file } of ROLE_EMOJI_FILES) {
+    const files = readdirSync(jobsDir).filter((f) => f.endsWith(".png"));
+    for (const file of files) {
+      const name = file.replace(".png", "");
       if (!existingNames.has(name)) {
         try {
           await client.application?.emojis.create({
-            attachment: join(publicDir, "jobs", file),
+            attachment: join(jobsDir, file),
             name,
           });
         } catch (err) {
