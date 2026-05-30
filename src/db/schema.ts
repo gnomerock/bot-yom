@@ -54,6 +54,7 @@ export const content = pgTable("content", {
   requiredPlayers: integer("required_players").notNull().default(8),
   description: text("description"),
   pointsOnClear: integer("points_on_clear").notNull().default(100),
+  guide: text("guide"),
 });
 
 export const guildSettings = pgTable("guild_settings", {

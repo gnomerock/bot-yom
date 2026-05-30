@@ -52,6 +52,7 @@ export type PartyEmbedData = {
     requiredPlayers: number;
     description: string | null;
     pointsOnClear: number;
+    guide: string | null;
   };
   members: Array<{ user: { username: string; discordId: string }; member: { job: string } }>;
   leaderName: string;
@@ -85,6 +86,10 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       { name: "Points", value: `+${content.pointsOnClear} on clear`, inline: true },
       { name: "Leader", value: leaderDiscordId ? `<@${leaderDiscordId}>` : (leaderName || "Unknown"), inline: false },
     );
+
+  if (content.guide) {
+    embed.addFields({ name: "📖 Guide", value: `[View Guide](${content.guide})`, inline: false });
+  }
 
   if (party.scheduledAt) {
     const scheduledDate = party.scheduledAt instanceof Date
