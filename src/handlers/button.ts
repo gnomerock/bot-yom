@@ -9,8 +9,8 @@ import {
 } from "discord.js";
 import { db } from "../db";
 import { parties, partyMembers, users, content } from "../db/schema";
-import { JOBS, JOB_ROLES } from "../db/schema";
-import { eq, and, count } from "drizzle-orm";
+import { JOBS, JOB_ROLES, FLEX_ROLE } from "../db/schema";
+import { eq, and, count, ne } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails, awardPoints } from "../db/helpers";
 import { refreshAllPartyMessages } from "../utils/board";
 
@@ -66,20 +66,47 @@ async function handleJoinRoleButton(
     .from(partyMembers)
     .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
 
-  if (!alreadyMember) {
-    const [{ value: memberCount }] = await db
+  // Flex — sign up as willing-to-fill, no job pick, no roster slot consumed
+  if (role === "flex") {
+    if (alreadyMember?.job === FLEX_ROLE) {
+      await interaction.editReply(`You're already signed up as **Flex** for Party #${partyId}.`);
+      return;
+    }
+
+    if (alreadyMember) {
+      await db.update(partyMembers).set({ job: FLEX_ROLE }).where(eq(partyMembers.id, alreadyMember.id));
+    } else {
+      await db.insert(partyMembers).values({ partyId, userId: user.id, job: FLEX_ROLE });
+    }
+
+    const updatedData = await getPartyWithDetails(partyId);
+    if (updatedData) await refreshAllPartyMessages(updatedData, interaction.client);
+
+    await interaction.editReply(
+      alreadyMember
+        ? `✅ Switched to **Flex** for Party #${partyId}!`
+        : `✅ Signed up as **Flex** for Party #${partyId}!`,
+    );
+    return;
+  }
+
+  // Taking a real role slot — check roster capacity only when this claims a NEW slot
+  // (fresh join, or converting from Flex, which held no slot)
+  const takesNewSlot = !alreadyMember || alreadyMember.job === FLEX_ROLE;
+  if (takesNewSlot) {
+    const [{ value: rosterCount }] = await db
       .select({ value: count() })
       .from(partyMembers)
-      .where(eq(partyMembers.partyId, partyId));
+      .where(and(eq(partyMembers.partyId, partyId), ne(partyMembers.job, FLEX_ROLE)));
 
-    if (memberCount >= row.content.requiredPlayers) {
+    if (rosterCount >= row.content.requiredPlayers) {
       await interaction.editReply("This party is already full.");
       return;
     }
   }
 
   const jobs = ROLE_JOBS[role] ?? JOBS;
-  const roleLabel = role === "tank" ? "Tank" : role === "healer" ? "Healer" : role === "dps" ? "DPS" : "Flex";
+  const roleLabel = role === "tank" ? "Tank" : role === "healer" ? "Healer" : "DPS";
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId(`join_role_job:${partyId}`)
@@ -186,14 +213,14 @@ async function handlePartyClearButton(interaction: ButtonInteraction, partyId: n
     return;
   }
 
-  const [{ value: memberCount }] = await db
+  const [{ value: rosterCount }] = await db
     .select({ value: count() })
     .from(partyMembers)
-    .where(eq(partyMembers.partyId, partyId));
+    .where(and(eq(partyMembers.partyId, partyId), ne(partyMembers.job, FLEX_ROLE)));
 
-  if (memberCount < row.content.requiredPlayers) {
+  if (rosterCount < row.content.requiredPlayers) {
     await interaction.editReply(
-      `Cannot clear — party needs **${row.content.requiredPlayers} members** but only has **${memberCount}**. Fill all slots first or use Disband.`,
+      `Cannot clear — party needs **${row.content.requiredPlayers} members** but only has **${rosterCount}**. Fill all slots first or use Disband.`,
     );
     return;
   }
@@ -201,7 +228,8 @@ async function handlePartyClearButton(interaction: ButtonInteraction, partyId: n
   await db.update(parties).set({ status: "cleared", updatedAt: new Date() }).where(eq(parties.id, partyId));
 
   const members = await db.select().from(partyMembers).where(eq(partyMembers.partyId, partyId));
-  await Promise.all(members.map((m) => awardPoints(m.userId, row.party.guildId, row.content.pointsOnClear)));
+  const rosterOnly = members.filter((m) => m.job !== FLEX_ROLE);
+  await Promise.all(rosterOnly.map((m) => awardPoints(m.userId, row.party.guildId, row.content.pointsOnClear)));
 
   const fullData = await getPartyWithDetails(partyId);
   if (fullData) {
@@ -212,7 +240,7 @@ async function handlePartyClearButton(interaction: ButtonInteraction, partyId: n
   }
 
   await interaction.editReply(
-    `🎉 **Party #${partyId} cleared!** +${row.content.pointsOnClear} points awarded to all ${memberCount} members.`,
+    `🎉 **Party #${partyId} cleared!** +${row.content.pointsOnClear} points awarded to all ${rosterOnly.length} members.`,
   );
 }
 

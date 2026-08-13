@@ -2,7 +2,7 @@ import {
   type StringSelectMenuInteraction,
 } from "discord.js";
 import { db } from "../db";
-import { partyMembers } from "../db/schema";
+import { partyMembers, FLEX_ROLE } from "../db/schema";
 import { type Job } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails } from "../db/helpers";
@@ -37,9 +37,16 @@ async function handleJoinJobSelect(
     .from(partyMembers)
     .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
 
+  // Roster slots exclude Flex sign-ups — they don't hold a slot
+  const rosterCount = partyData.members.filter((m) => m.member.job !== FLEX_ROLE).length;
+
   if (alreadyMember) {
     if (alreadyMember.job === job) {
       await interaction.editReply({ content: `You're already in this party as **${job}**.`, components: [] });
+      return;
+    }
+    if (alreadyMember.job === FLEX_ROLE && rosterCount >= partyData.content.requiredPlayers) {
+      await interaction.editReply({ content: "This party is now full.", components: [] });
       return;
     }
     await db
@@ -47,7 +54,7 @@ async function handleJoinJobSelect(
       .set({ job })
       .where(eq(partyMembers.id, alreadyMember.id));
   } else {
-    if (partyData.members.length >= partyData.content.requiredPlayers) {
+    if (rosterCount >= partyData.content.requiredPlayers) {
       await interaction.editReply({ content: "This party is now full.", components: [] });
       return;
     }

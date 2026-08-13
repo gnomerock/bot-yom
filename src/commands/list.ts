@@ -9,7 +9,7 @@ import {
 import type { Command } from "../types";
 import { db } from "../db";
 import { parties, content, users, partyMembers } from "../db/schema";
-import { JOB_ROLES, type Job } from "../db/schema";
+import { JOB_ROLES, FLEX_ROLE, type Job } from "../db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { jobEmoji } from "../utils/jobEmoji";
 
@@ -58,8 +58,10 @@ export default {
       .from(partyMembers)
       .where(inArray(partyMembers.partyId, partyIds));
 
+    // Roster slots exclude Flex sign-ups — they don't hold a slot
     const memberMap = new Map<number, string[]>();
     for (const m of allMembers) {
+      if (m.job === FLEX_ROLE) continue;
       const arr = memberMap.get(m.partyId) ?? [];
       arr.push(m.job);
       memberMap.set(m.partyId, arr);

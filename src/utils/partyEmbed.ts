@@ -7,7 +7,7 @@ import {
 } from "discord.js";
 import { join } from "node:path";
 import type { ContentType, PartyStatus, Job } from "../db/schema";
-import { JOB_ROLES } from "../db/schema";
+import { JOB_ROLES, FLEX_ROLE } from "../db/schema";
 import { jobEmoji, contentTypeEmoji, roleEmojiForButton, roleEmojiString } from "./jobEmoji";
 
 const publicDir = join(import.meta.dir, "../..", "public");
@@ -65,7 +65,9 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   attachment: AttachmentBuilder;
 } {
   const { party, content, members, leaderName, leaderDiscordId } = data;
-  const isFull = members.length >= content.requiredPlayers;
+  const rosterMembers = members.filter((m) => m.member.job !== FLEX_ROLE);
+  const flexMembers = members.filter((m) => m.member.job === FLEX_ROLE);
+  const isFull = rosterMembers.length >= content.requiredPlayers;
   const isOpen = party.status === "open";
 
   const statusIcon = party.status === "cleared" ? "✅" : party.status === "disbanded" ? "❌" : "🔵";
@@ -82,7 +84,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     .setThumbnail(`attachment://${iconName}`)
     .addFields(
       { name: "Type", value: `${typeEmoji} ${TYPE_LABELS[content.type as ContentType] ?? content.type}`, inline: true },
-      { name: "Slots", value: `${members.length} / ${content.requiredPlayers}`, inline: true },
+      { name: "Slots", value: `${rosterMembers.length} / ${content.requiredPlayers}`, inline: true },
       { name: "Points", value: `+${content.pointsOnClear} on clear`, inline: true },
       { name: "Leader", value: leaderDiscordId ? `<@${leaderDiscordId}>` : (leaderName || "Unknown"), inline: false },
     );
@@ -114,9 +116,9 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   const healerSlots = Math.round(2 * scale);
   const dpsSlots    = content.requiredPlayers - tankSlots - healerSlots;
 
-  const tankMembers   = members.filter(m => JOB_ROLES[m.member.job as Job] === "Tank");
-  const healerMembers = members.filter(m => JOB_ROLES[m.member.job as Job] === "Healer");
-  const dpsMembers    = members.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job]));
+  const tankMembers   = rosterMembers.filter(m => JOB_ROLES[m.member.job as Job] === "Tank");
+  const healerMembers = rosterMembers.filter(m => JOB_ROLES[m.member.job as Job] === "Healer");
+  const dpsMembers    = rosterMembers.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job]));
 
   const tankCount   = tankMembers.length;
   const healerCount = healerMembers.length;
@@ -142,9 +144,17 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   }
 
   embed.addFields({
-    name: `Members (${members.length} / ${content.requiredPlayers})`,
+    name: `Members (${rosterMembers.length} / ${content.requiredPlayers})`,
     value: slotLines.join("\n"),
   });
+
+  if (flexMembers.length > 0) {
+    const fe = roleEmojiString("flex");
+    embed.addFields({
+      name: `${fe} Flex (${flexMembers.length})`,
+      value: flexMembers.map(m => `<@${m.user.discordId}>`).join(", "),
+    });
+  }
 
   const footerText =
     party.status === "cleared" ? "🎉 Party cleared!" :
@@ -183,11 +193,11 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       .setDisabled(isFull || dpsCount >= dpsSlots);
     if (dpsEmoji) dpsBtn.setEmoji(dpsEmoji); else dpsBtn.setLabel(`⚔ DPS ${dpsCount}/${dpsSlots}`);
 
+    // Flex doesn't take a roster slot, so it stays open even when the roster is full
     const flexBtn = new ButtonBuilder()
       .setCustomId(`join_role:${party.id}:flex`)
       .setLabel("Flex")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(isFull);
+      .setStyle(ButtonStyle.Secondary);
     if (flexEmoji) flexBtn.setEmoji(flexEmoji); else flexBtn.setLabel("🔀 Flex");
 
     // Row 1: join by role + leave

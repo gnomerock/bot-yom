@@ -5,8 +5,8 @@ import {
 } from "discord.js";
 import type { Command } from "../types";
 import { db } from "../db";
-import { parties, partyMembers, content } from "../db/schema";
-import { eq, and, count } from "drizzle-orm";
+import { parties, partyMembers, content, FLEX_ROLE } from "../db/schema";
+import { eq, and, count, ne } from "drizzle-orm";
 import { upsertUser, awardPoints, getPartyWithDetails } from "../db/helpers";
 import { refreshAllPartyMessages } from "../utils/board";
 
@@ -52,15 +52,17 @@ export default {
 
     const partyId = row.party.id;
 
+    let rosterAwardedCount = 0;
+
     if (status === "cleared") {
-      const [{ value: memberCount }] = await db
+      const [{ value: rosterCount }] = await db
         .select({ value: count() })
         .from(partyMembers)
-        .where(eq(partyMembers.partyId, partyId));
+        .where(and(eq(partyMembers.partyId, partyId), ne(partyMembers.job, FLEX_ROLE)));
 
-      if (memberCount < row.content.requiredPlayers) {
+      if (rosterCount < row.content.requiredPlayers) {
         await interaction.editReply(
-          `Cannot clear — party needs **${row.content.requiredPlayers} members** but only has **${memberCount}**. Fill all slots first or use \`/done disband\`.`,
+          `Cannot clear — party needs **${row.content.requiredPlayers} members** but only has **${rosterCount}**. Fill all slots first or use \`/done disband\`.`,
         );
         return;
       }
@@ -73,7 +75,9 @@ export default {
 
     if (status === "cleared") {
       const members = await db.select().from(partyMembers).where(eq(partyMembers.partyId, partyId));
-      await Promise.all(members.map((m) => awardPoints(m.userId, guildId, row.content.pointsOnClear)));
+      const rosterOnly = members.filter((m) => m.job !== FLEX_ROLE);
+      rosterAwardedCount = rosterOnly.length;
+      await Promise.all(rosterOnly.map((m) => awardPoints(m.userId, guildId, row.content.pointsOnClear)));
     }
 
     const fullData = await getPartyWithDetails(partyId);
@@ -87,7 +91,7 @@ export default {
     const verb = status === "cleared" ? "Cleared 🎉" : "Disbanded";
     const detail =
       status === "cleared"
-        ? `+${row.content.pointsOnClear} points awarded to all ${fullData?.members.length ?? 0} members.`
+        ? `+${row.content.pointsOnClear} points awarded to all ${rosterAwardedCount} members.`
         : "No points awarded.";
 
     await interaction.editReply(`**Party #${partyId} — ${verb}**\n${detail}`);

@@ -23,6 +23,10 @@ export const JOBS = [
 ] as const;
 export type Job = (typeof JOBS)[number];
 
+// "Flex" — signed up as willing-to-fill, no fixed job, no roster slot
+export const FLEX_ROLE = "Flex" as const;
+export type MemberJob = Job | typeof FLEX_ROLE;
+
 export const JOB_ROLES: Record<Job, string> = {
   Paladin: "Tank", Warrior: "Tank", "Dark Knight": "Tank", Gunbreaker: "Tank",
   "White Mage": "Healer", Scholar: "Healer", Astrologian: "Healer", Sage: "Healer",
@@ -82,7 +86,7 @@ export const partyMembers = pgTable("party_members", {
   id: serial("id").primaryKey(),
   partyId: integer("party_id").notNull().references(() => parties.id),
   userId: integer("user_id").notNull().references(() => users.id),
-  job: text("job").$type<Job>().notNull(),
+  job: text("job").$type<MemberJob>().notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
 
