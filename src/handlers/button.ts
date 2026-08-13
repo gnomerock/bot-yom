@@ -14,12 +14,13 @@ import { eq, and, count } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails, awardPoints } from "../db/helpers";
 import { refreshAllPartyMessages } from "../utils/board";
 
-type JoinRole = "tank" | "healer" | "dps";
+type JoinRole = "tank" | "healer" | "dps" | "flex";
 
 const ROLE_JOBS: Record<JoinRole, string[]> = {
   tank: JOBS.filter((j) => JOB_ROLES[j] === "Tank"),
   healer: JOBS.filter((j) => JOB_ROLES[j] === "Healer"),
   dps: JOBS.filter((j) => !["Tank", "Healer"].includes(JOB_ROLES[j])),
+  flex: [...JOBS],
 };
 
 export async function handleButton(interaction: ButtonInteraction) {
@@ -78,7 +79,7 @@ async function handleJoinRoleButton(
   }
 
   const jobs = ROLE_JOBS[role] ?? JOBS;
-  const roleLabel = role === "tank" ? "Tank" : role === "healer" ? "Healer" : "DPS";
+  const roleLabel = role === "tank" ? "Tank" : role === "healer" ? "Healer" : role === "dps" ? "DPS" : "Flex";
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId(`join_role_job:${partyId}`)

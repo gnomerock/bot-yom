@@ -160,6 +160,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     const tankEmoji   = roleEmojiForButton("tank");
     const healerEmoji = roleEmojiForButton("healer");
     const dpsEmoji    = roleEmojiForButton("dps");
+    const flexEmoji   = roleEmojiForButton("flex");
 
     const tankBtn = new ButtonBuilder()
       .setCustomId(`join_role:${party.id}:tank`)
@@ -182,6 +183,13 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       .setDisabled(isFull || dpsCount >= dpsSlots);
     if (dpsEmoji) dpsBtn.setEmoji(dpsEmoji); else dpsBtn.setLabel(`⚔ DPS ${dpsCount}/${dpsSlots}`);
 
+    const flexBtn = new ButtonBuilder()
+      .setCustomId(`join_role:${party.id}:flex`)
+      .setLabel("Flex")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(isFull);
+    if (flexEmoji) flexBtn.setEmoji(flexEmoji); else flexBtn.setLabel("🔀 Flex");
+
     // Row 1: join by role + leave
     const leaveBtn = new ButtonBuilder()
       .setCustomId(`party_leave:${party.id}`)
@@ -189,7 +197,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       .setStyle(ButtonStyle.Secondary);
 
     rows.push(
-      new ActionRowBuilder<ButtonBuilder>().addComponents(tankBtn, healerBtn, dpsBtn, leaveBtn),
+      new ActionRowBuilder<ButtonBuilder>().addComponents(tankBtn, healerBtn, dpsBtn, flexBtn, leaveBtn),
     );
 
     // Row 2: leader actions
