@@ -23,7 +23,7 @@ export const JOBS = [
 ] as const;
 export type Job = (typeof JOBS)[number];
 
-// "Flex" — signed up as willing-to-fill, no fixed job, no roster slot
+// "Flex" — signed up as willing-to-fill, no fixed job, but still counts toward the party's headcount
 export const FLEX_ROLE = "Flex" as const;
 export type MemberJob = Job | typeof FLEX_ROLE;
 

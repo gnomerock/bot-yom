@@ -67,7 +67,8 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   const { party, content, members, leaderName, leaderDiscordId } = data;
   const rosterMembers = members.filter((m) => m.member.job !== FLEX_ROLE);
   const flexMembers = members.filter((m) => m.member.job === FLEX_ROLE);
-  const isFull = rosterMembers.length >= content.requiredPlayers;
+  // Flex counts toward the party's total headcount even though it doesn't fill a specific job slot
+  const isFull = members.length >= content.requiredPlayers;
   const isOpen = party.status === "open";
 
   const statusIcon = party.status === "cleared" ? "✅" : party.status === "disbanded" ? "❌" : "🔵";
@@ -84,7 +85,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     .setThumbnail(`attachment://${iconName}`)
     .addFields(
       { name: "Type", value: `${typeEmoji} ${TYPE_LABELS[content.type as ContentType] ?? content.type}`, inline: true },
-      { name: "Slots", value: `${rosterMembers.length} / ${content.requiredPlayers}`, inline: true },
+      { name: "Slots", value: `${members.length} / ${content.requiredPlayers}`, inline: true },
       { name: "Points", value: `+${content.pointsOnClear} on clear`, inline: true },
       { name: "Leader", value: leaderDiscordId ? `<@${leaderDiscordId}>` : (leaderName || "Unknown"), inline: false },
     );
@@ -144,7 +145,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   }
 
   embed.addFields({
-    name: `Members (${rosterMembers.length} / ${content.requiredPlayers})`,
+    name: `Members (${members.length} / ${content.requiredPlayers})`,
     value: slotLines.join("\n"),
   });
 
@@ -193,11 +194,12 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       .setDisabled(isFull || dpsCount >= dpsSlots);
     if (dpsEmoji) dpsBtn.setEmoji(dpsEmoji); else dpsBtn.setLabel(`⚔ DPS ${dpsCount}/${dpsSlots}`);
 
-    // Flex doesn't take a roster slot, so it stays open even when the roster is full
+    // Flex counts toward the total headcount, so it closes once the party is full
     const flexBtn = new ButtonBuilder()
       .setCustomId(`join_role:${party.id}:flex`)
       .setLabel("Flex")
-      .setStyle(ButtonStyle.Secondary);
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(isFull);
     if (flexEmoji) flexBtn.setEmoji(flexEmoji); else flexBtn.setLabel("🔀 Flex");
 
     // Row 1: join by role + leave

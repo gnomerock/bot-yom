@@ -24,6 +24,7 @@ const ROLE_FALLBACK: Record<string, string> = {
 
 function slotRow(jobs: string[], requiredPlayers: number): string {
   const filled = jobs.map((j) => {
+    if (j === FLEX_ROLE) return "🔀";
     const e = jobEmoji(j);
     return e || (ROLE_FALLBACK[JOB_ROLES[j as Job]] ?? "🔴");
   });
@@ -58,10 +59,8 @@ export default {
       .from(partyMembers)
       .where(inArray(partyMembers.partyId, partyIds));
 
-    // Roster slots exclude Flex sign-ups — they don't hold a slot
     const memberMap = new Map<number, string[]>();
     for (const m of allMembers) {
-      if (m.job === FLEX_ROLE) continue;
       const arr = memberMap.get(m.partyId) ?? [];
       arr.push(m.job);
       memberMap.set(m.partyId, arr);

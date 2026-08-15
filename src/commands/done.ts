@@ -5,8 +5,8 @@ import {
 } from "discord.js";
 import type { Command } from "../types";
 import { db } from "../db";
-import { parties, partyMembers, content, FLEX_ROLE } from "../db/schema";
-import { eq, and, count, ne } from "drizzle-orm";
+import { parties, partyMembers, content } from "../db/schema";
+import { eq, and, count } from "drizzle-orm";
 import { upsertUser, awardPoints, getPartyWithDetails } from "../db/helpers";
 import { refreshAllPartyMessages } from "../utils/board";
 
@@ -58,7 +58,7 @@ export default {
       const [{ value: rosterCount }] = await db
         .select({ value: count() })
         .from(partyMembers)
-        .where(and(eq(partyMembers.partyId, partyId), ne(partyMembers.job, FLEX_ROLE)));
+        .where(eq(partyMembers.partyId, partyId));
 
       if (rosterCount < row.content.requiredPlayers) {
         await interaction.editReply(
@@ -75,9 +75,8 @@ export default {
 
     if (status === "cleared") {
       const members = await db.select().from(partyMembers).where(eq(partyMembers.partyId, partyId));
-      const rosterOnly = members.filter((m) => m.job !== FLEX_ROLE);
-      rosterAwardedCount = rosterOnly.length;
-      await Promise.all(rosterOnly.map((m) => awardPoints(m.userId, guildId, row.content.pointsOnClear)));
+      rosterAwardedCount = members.length;
+      await Promise.all(members.map((m) => awardPoints(m.userId, guildId, row.content.pointsOnClear)));
     }
 
     const fullData = await getPartyWithDetails(partyId);
