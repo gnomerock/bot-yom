@@ -52,15 +52,17 @@ export default {
 
     const partyId = row.party.id;
 
+    let rosterAwardedCount = 0;
+
     if (status === "cleared") {
-      const [{ value: memberCount }] = await db
+      const [{ value: rosterCount }] = await db
         .select({ value: count() })
         .from(partyMembers)
         .where(eq(partyMembers.partyId, partyId));
 
-      if (memberCount < MIN_CLEAR_MEMBERS) {
+      if (rosterCount < MIN_CLEAR_MEMBERS) {
         await interaction.editReply(
-          `Cannot clear — party needs at least **${MIN_CLEAR_MEMBERS} members** but only has **${memberCount}**. Recruit more or use \`/done disband\`.`,
+          `Cannot clear — party needs at least **${MIN_CLEAR_MEMBERS} members** but only has **${rosterCount}**. Recruit more or use \`/done disband\`.`,
         );
         return;
       }
@@ -73,6 +75,7 @@ export default {
 
     if (status === "cleared") {
       const members = await db.select().from(partyMembers).where(eq(partyMembers.partyId, partyId));
+      rosterAwardedCount = members.length;
       await Promise.all(members.map((m) => awardPoints(m.userId, guildId, row.content.pointsOnClear)));
     }
 
@@ -87,7 +90,7 @@ export default {
     const verb = status === "cleared" ? "Cleared 🎉" : "Disbanded";
     const detail =
       status === "cleared"
-        ? `+${row.content.pointsOnClear} points awarded to all ${fullData?.members.length ?? 0} members.`
+        ? `+${row.content.pointsOnClear} points awarded to all ${rosterAwardedCount} members.`
         : "No points awarded.";
 
     await interaction.editReply(`**Party #${partyId} — ${verb}**\n${detail}`);

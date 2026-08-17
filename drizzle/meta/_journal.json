@@ -36,6 +36,13 @@
       "when": 1779867264102,
       "tag": "0004_overrated_exodus",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780052681373,
+      "tag": "0005_daily_moonstone",
+      "breakpoints": true
     }
   ]
 }

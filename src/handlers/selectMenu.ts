@@ -37,6 +37,9 @@ async function handleJoinJobSelect(
     .from(partyMembers)
     .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
 
+  // Switching job for an existing member never changes headcount, only fresh joins do
+  const rosterCount = partyData.members.length;
+
   if (alreadyMember) {
     if (alreadyMember.job === job) {
       await interaction.editReply({ content: `You're already in this party as **${job}**.`, components: [] });
@@ -47,7 +50,7 @@ async function handleJoinJobSelect(
       .set({ job })
       .where(eq(partyMembers.id, alreadyMember.id));
   } else {
-    if (partyData.members.length >= partyData.content.requiredPlayers) {
+    if (rosterCount >= partyData.content.requiredPlayers) {
       await interaction.editReply({ content: "This party is now full.", components: [] });
       return;
     }

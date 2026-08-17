@@ -9,7 +9,7 @@ import {
 import type { Command } from "../types";
 import { db } from "../db";
 import { parties, content, users, partyMembers } from "../db/schema";
-import { JOB_ROLES, type Job } from "../db/schema";
+import { JOB_ROLES, FLEX_ROLE, type Job } from "../db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { jobEmoji } from "../utils/jobEmoji";
 
@@ -24,6 +24,7 @@ const ROLE_FALLBACK: Record<string, string> = {
 
 function slotRow(jobs: string[], requiredPlayers: number): string {
   const filled = jobs.map((j) => {
+    if (j === FLEX_ROLE) return "🔀";
     const e = jobEmoji(j);
     return e || (ROLE_FALLBACK[JOB_ROLES[j as Job]] ?? "🔴");
   });

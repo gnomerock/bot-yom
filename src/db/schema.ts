@@ -23,6 +23,10 @@ export const JOBS = [
 ] as const;
 export type Job = (typeof JOBS)[number];
 
+// "Flex" — signed up as willing-to-fill, no fixed job, but still counts toward the party's headcount
+export const FLEX_ROLE = "Flex" as const;
+export type MemberJob = Job | typeof FLEX_ROLE;
+
 export const JOB_ROLES: Record<Job, string> = {
   Paladin: "Tank", Warrior: "Tank", "Dark Knight": "Tank", Gunbreaker: "Tank",
   "White Mage": "Healer", Scholar: "Healer", Astrologian: "Healer", Sage: "Healer",
@@ -57,6 +61,7 @@ export const content = pgTable("content", {
   requiredPlayers: integer("required_players").notNull().default(8),
   description: text("description"),
   pointsOnClear: integer("points_on_clear").notNull().default(100),
+  guide: text("guide"),
 });
 
 export const guildSettings = pgTable("guild_settings", {
@@ -84,7 +89,7 @@ export const partyMembers = pgTable("party_members", {
   id: serial("id").primaryKey(),
   partyId: integer("party_id").notNull().references(() => parties.id),
   userId: integer("user_id").notNull().references(() => users.id),
-  job: text("job").$type<Job>().notNull(),
+  job: text("job").$type<MemberJob>().notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
 

@@ -7,7 +7,7 @@ import {
 } from "discord.js";
 import { join } from "node:path";
 import type { ContentType, PartyStatus, Job } from "../db/schema";
-import { JOB_ROLES } from "../db/schema";
+import { JOB_ROLES, FLEX_ROLE } from "../db/schema";
 import { jobEmoji, contentTypeEmoji, roleEmojiForButton, roleEmojiString } from "./jobEmoji";
 
 const publicDir = join(import.meta.dir, "../..", "public");
@@ -52,6 +52,7 @@ export type PartyEmbedData = {
     requiredPlayers: number;
     description: string | null;
     pointsOnClear: number;
+    guide: string | null;
   };
   members: Array<{ user: { username: string; discordId: string }; member: { job: string } }>;
   leaderName: string;
@@ -64,6 +65,9 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   attachment: AttachmentBuilder;
 } {
   const { party, content, members, leaderName, leaderDiscordId } = data;
+  const rosterMembers = members.filter((m) => m.member.job !== FLEX_ROLE);
+  const flexMembers = members.filter((m) => m.member.job === FLEX_ROLE);
+  // Flex counts toward the party's total headcount even though it doesn't fill a specific job slot
   const isFull = members.length >= content.requiredPlayers;
   const isOpen = party.status === "open";
 
@@ -85,6 +89,10 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       { name: "Points", value: `+${content.pointsOnClear} on clear`, inline: true },
       { name: "Leader", value: leaderDiscordId ? `<@${leaderDiscordId}>` : (leaderName || "Unknown"), inline: false },
     );
+
+  if (content.guide) {
+    embed.addFields({ name: "📖 Guide", value: `[View Guide](${content.guide})`, inline: false });
+  }
 
   if (party.scheduledAt) {
     const scheduledDate = party.scheduledAt instanceof Date
@@ -109,9 +117,9 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
   const healerSlots = Math.round(2 * scale);
   const dpsSlots    = content.requiredPlayers - tankSlots - healerSlots;
 
-  const tankMembers   = members.filter(m => JOB_ROLES[m.member.job as Job] === "Tank");
-  const healerMembers = members.filter(m => JOB_ROLES[m.member.job as Job] === "Healer");
-  const dpsMembers    = members.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job]));
+  const tankMembers   = rosterMembers.filter(m => JOB_ROLES[m.member.job as Job] === "Tank");
+  const healerMembers = rosterMembers.filter(m => JOB_ROLES[m.member.job as Job] === "Healer");
+  const dpsMembers    = rosterMembers.filter(m => !["Tank", "Healer"].includes(JOB_ROLES[m.member.job as Job]));
 
   const tankCount   = tankMembers.length;
   const healerCount = healerMembers.length;
@@ -141,6 +149,14 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     value: slotLines.join("\n"),
   });
 
+  if (flexMembers.length > 0) {
+    const fe = roleEmojiString("flex");
+    embed.addFields({
+      name: `${fe} Flex (${flexMembers.length})`,
+      value: flexMembers.map(m => `<@${m.user.discordId}>`).join(", "),
+    });
+  }
+
   const footerText =
     party.status === "cleared" ? "🎉 Party cleared!" :
     party.status === "disbanded" ? "Party disbanded" :
@@ -155,6 +171,7 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
     const tankEmoji   = roleEmojiForButton("tank");
     const healerEmoji = roleEmojiForButton("healer");
     const dpsEmoji    = roleEmojiForButton("dps");
+    const flexEmoji   = roleEmojiForButton("flex");
 
     const tankBtn = new ButtonBuilder()
       .setCustomId(`join_role:${party.id}:tank`)
@@ -177,9 +194,22 @@ export function buildPartyEmbed(data: PartyEmbedData, iconName = "duty-icon.png"
       .setDisabled(isFull || dpsCount >= dpsSlots);
     if (dpsEmoji) dpsBtn.setEmoji(dpsEmoji); else dpsBtn.setLabel(`⚔ DPS ${dpsCount}/${dpsSlots}`);
 
-    // Row 1: join by role
+    // Flex counts toward the total headcount, so it closes once the party is full
+    const flexBtn = new ButtonBuilder()
+      .setCustomId(`join_role:${party.id}:flex`)
+      .setLabel("Flex")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(isFull);
+    if (flexEmoji) flexBtn.setEmoji(flexEmoji); else flexBtn.setLabel("🔀 Flex");
+
+    // Row 1: join by role + leave
+    const leaveBtn = new ButtonBuilder()
+      .setCustomId(`party_leave:${party.id}`)
+      .setLabel("🚪 Leave")
+      .setStyle(ButtonStyle.Secondary);
+
     rows.push(
-      new ActionRowBuilder<ButtonBuilder>().addComponents(tankBtn, healerBtn, dpsBtn),
+      new ActionRowBuilder<ButtonBuilder>().addComponents(tankBtn, healerBtn, dpsBtn, flexBtn, leaveBtn),
     );
 
     // Row 2: leader actions

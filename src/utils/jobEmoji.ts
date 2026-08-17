@@ -69,19 +69,19 @@ export function setupJobEmojis(client: Client) {
     if (contentType) contentEmojiMap.set(contentType, str);
 
     // Role emojis for buttons
-    if (name === "tank" || name === "healer" || name === "dps") {
+    if (name === "tank" || name === "healer" || name === "dps" || name === "flex") {
       roleEmojiMap.set(name, { id: emoji.id, name: emoji.name });
     }
   }
 }
 
-export function roleEmojiForButton(role: "tank" | "healer" | "dps"): { id: string; name: string } | undefined {
+export function roleEmojiForButton(role: "tank" | "healer" | "dps" | "flex"): { id: string; name: string } | undefined {
   return roleEmojiMap.get(role);
 }
 
-const ROLE_EMOJI_FALLBACK: Record<string, string> = { tank: "🛡", healer: "💚", dps: "⚔" };
+const ROLE_EMOJI_FALLBACK: Record<string, string> = { tank: "🛡", healer: "💚", dps: "⚔", flex: "🔀" };
 
-export function roleEmojiString(role: "tank" | "healer" | "dps"): string {
+export function roleEmojiString(role: "tank" | "healer" | "dps" | "flex"): string {
   const e = roleEmojiMap.get(role);
   return e ? `<:${e.name}:${e.id}>` : ROLE_EMOJI_FALLBACK[role];
 }

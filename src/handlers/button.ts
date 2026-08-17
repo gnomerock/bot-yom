@@ -9,17 +9,18 @@ import {
 } from "discord.js";
 import { db } from "../db";
 import { parties, partyMembers, users, content, MIN_CLEAR_MEMBERS } from "../db/schema";
-import { JOBS, JOB_ROLES } from "../db/schema";
+import { JOBS, JOB_ROLES, FLEX_ROLE } from "../db/schema";
 import { eq, and, count } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails, awardPoints } from "../db/helpers";
 import { refreshAllPartyMessages } from "../utils/board";
 
-type JoinRole = "tank" | "healer" | "dps";
+type JoinRole = "tank" | "healer" | "dps" | "flex";
 
 const ROLE_JOBS: Record<JoinRole, string[]> = {
   tank: JOBS.filter((j) => JOB_ROLES[j] === "Tank"),
   healer: JOBS.filter((j) => JOB_ROLES[j] === "Healer"),
   dps: JOBS.filter((j) => !["Tank", "Healer"].includes(JOB_ROLES[j])),
+  flex: [...JOBS],
 };
 
 export async function handleButton(interaction: ButtonInteraction) {
@@ -34,6 +35,8 @@ export async function handleButton(interaction: ButtonInteraction) {
     await handlePartyClearButton(interaction, parseInt(parts[1]));
   } else if (action === "party_disband") {
     await handlePartyDisbandButton(interaction, parseInt(parts[1]));
+  } else if (action === "party_leave") {
+    await handlePartyLeaveButton(interaction, parseInt(parts[1]));
   }
 }
 
@@ -63,16 +66,42 @@ async function handleJoinRoleButton(
     .from(partyMembers)
     .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
 
+  // Any brand-new join (including Flex) consumes a party slot — switching role/job for an
+  // existing member never changes headcount, so only gate fresh joins on capacity.
   if (!alreadyMember) {
-    const [{ value: memberCount }] = await db
+    const [{ value: totalCount }] = await db
       .select({ value: count() })
       .from(partyMembers)
       .where(eq(partyMembers.partyId, partyId));
 
-    if (memberCount >= row.content.requiredPlayers) {
+    if (totalCount >= row.content.requiredPlayers) {
       await interaction.editReply("This party is already full.");
       return;
     }
+  }
+
+  // Flex — sign up as willing-to-fill, no job pick required
+  if (role === "flex") {
+    if (alreadyMember?.job === FLEX_ROLE) {
+      await interaction.editReply(`You're already signed up as **Flex** for Party #${partyId}.`);
+      return;
+    }
+
+    if (alreadyMember) {
+      await db.update(partyMembers).set({ job: FLEX_ROLE }).where(eq(partyMembers.id, alreadyMember.id));
+    } else {
+      await db.insert(partyMembers).values({ partyId, userId: user.id, job: FLEX_ROLE });
+    }
+
+    const updatedData = await getPartyWithDetails(partyId);
+    if (updatedData) await refreshAllPartyMessages(updatedData, interaction.client);
+
+    await interaction.editReply(
+      alreadyMember
+        ? `✅ Switched to **Flex** for Party #${partyId}!`
+        : `✅ Signed up as **Flex** for Party #${partyId}!`,
+    );
+    return;
   }
 
   const jobs = ROLE_JOBS[role] ?? JOBS;
@@ -183,14 +212,14 @@ async function handlePartyClearButton(interaction: ButtonInteraction, partyId: n
     return;
   }
 
-  const [{ value: memberCount }] = await db
+  const [{ value: rosterCount }] = await db
     .select({ value: count() })
     .from(partyMembers)
     .where(eq(partyMembers.partyId, partyId));
 
-  if (memberCount < MIN_CLEAR_MEMBERS) {
+  if (rosterCount < MIN_CLEAR_MEMBERS) {
     await interaction.editReply(
-      `Cannot clear — party needs at least **${MIN_CLEAR_MEMBERS} members** but only has **${memberCount}**. Recruit more or use Disband.`,
+      `Cannot clear — party needs at least **${MIN_CLEAR_MEMBERS} members** but only has **${rosterCount}**. Recruit more or use Disband.`,
     );
     return;
   }
@@ -209,8 +238,50 @@ async function handlePartyClearButton(interaction: ButtonInteraction, partyId: n
   }
 
   await interaction.editReply(
-    `🎉 **Party #${partyId} cleared!** +${row.content.pointsOnClear} points awarded to all ${memberCount} members.`,
+    `🎉 **Party #${partyId} cleared!** +${row.content.pointsOnClear} points awarded to all ${members.length} members.`,
   );
+}
+
+// ── Leave (member only, not leader) ─────────────────────────────────────────
+
+async function handlePartyLeaveButton(interaction: ButtonInteraction, partyId: number) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const user = await upsertUser(interaction.user.id, interaction.user.username);
+
+  const [party] = await db
+    .select()
+    .from(parties)
+    .where(and(eq(parties.id, partyId), eq(parties.status, "open")));
+
+  if (!party) {
+    await interaction.editReply("Party not found or already closed.");
+    return;
+  }
+
+  if (party.leaderId === user.id) {
+    await interaction.editReply("You're the party leader — use **Disband** to close the party instead.");
+    return;
+  }
+
+  const [membership] = await db
+    .select()
+    .from(partyMembers)
+    .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
+
+  if (!membership) {
+    await interaction.editReply("You're not in this party.");
+    return;
+  }
+
+  await db.delete(partyMembers).where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, user.id)));
+
+  const fullData = await getPartyWithDetails(partyId);
+  if (fullData) {
+    await refreshAllPartyMessages(fullData, interaction.client);
+  }
+
+  await interaction.editReply(`You've left **Party #${partyId}**.`);
 }
 
 // ── Disband (leader only) ────────────────────────────────────────────────────
