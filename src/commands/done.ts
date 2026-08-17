@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import type { Command } from "../types";
 import { db } from "../db";
-import { parties, partyMembers, content } from "../db/schema";
+import { parties, partyMembers, content, MIN_CLEAR_MEMBERS } from "../db/schema";
 import { eq, and, count } from "drizzle-orm";
 import { upsertUser, awardPoints, getPartyWithDetails } from "../db/helpers";
 import { refreshAllPartyMessages } from "../utils/board";
@@ -58,9 +58,9 @@ export default {
         .from(partyMembers)
         .where(eq(partyMembers.partyId, partyId));
 
-      if (memberCount < row.content.requiredPlayers) {
+      if (memberCount < MIN_CLEAR_MEMBERS) {
         await interaction.editReply(
-          `Cannot clear — party needs **${row.content.requiredPlayers} members** but only has **${memberCount}**. Fill all slots first or use \`/done disband\`.`,
+          `Cannot clear — party needs at least **${MIN_CLEAR_MEMBERS} members** but only has **${memberCount}**. Recruit more or use \`/done disband\`.`,
         );
         return;
       }

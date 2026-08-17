@@ -8,7 +8,7 @@ import {
   type ButtonInteraction,
 } from "discord.js";
 import { db } from "../db";
-import { parties, partyMembers, users, content } from "../db/schema";
+import { parties, partyMembers, users, content, MIN_CLEAR_MEMBERS } from "../db/schema";
 import { JOBS, JOB_ROLES } from "../db/schema";
 import { eq, and, count } from "drizzle-orm";
 import { upsertUser, getPartyWithDetails, awardPoints } from "../db/helpers";
@@ -188,9 +188,9 @@ async function handlePartyClearButton(interaction: ButtonInteraction, partyId: n
     .from(partyMembers)
     .where(eq(partyMembers.partyId, partyId));
 
-  if (memberCount < row.content.requiredPlayers) {
+  if (memberCount < MIN_CLEAR_MEMBERS) {
     await interaction.editReply(
-      `Cannot clear — party needs **${row.content.requiredPlayers} members** but only has **${memberCount}**. Fill all slots first or use Disband.`,
+      `Cannot clear — party needs at least **${MIN_CLEAR_MEMBERS} members** but only has **${memberCount}**. Recruit more or use Disband.`,
     );
     return;
   }

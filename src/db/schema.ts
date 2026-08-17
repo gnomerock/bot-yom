@@ -40,6 +40,9 @@ export type ContentType = (typeof CONTENT_TYPES)[number];
 export const PARTY_STATUSES = ["open", "cleared", "disbanded"] as const;
 export type PartyStatus = (typeof PARTY_STATUSES)[number];
 
+// Minimum members required to clear a party, even if it isn't full.
+export const MIN_CLEAR_MEMBERS = 4;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   discordId: text("discord_id").notNull().unique(),
